@@ -50,7 +50,12 @@ class DDPMLabelsDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         vol = load_volume(self.files[index])
-        resized_vol = torch.unsqueeze(torch.Tensor(vol.astype(np.uint8)), 0)
+        resized_vol = torch.Tensor(vol.astype(np.uint8))
+        resized_vol = torch.movedim(
+            F.one_hot(resized_vol.to(torch.int64), num_classes=24),
+            (0, 1, 2),
+            (1, 2, 0),
+        )
         return resized_vol
 
     def __len__(self):
@@ -76,7 +81,7 @@ def forward_diffusion_sample(x_0, t, device="cpu"):
     Takes an image and a timestep as input and
     returns the noisy version of it
     """
-    noise = torch.randn_like(x_0)
+    noise = torch.randn_like(x_0, dtype=torch.float32)
     sqrt_alphas_cumprod_t = get_index_from_list(
         sqrt_alphas_cumprod, t, x_0.shape
     )
@@ -253,7 +258,7 @@ if __name__ == "__main__":
         "/space/calico/1/users/Harsha/ddpm-labels/output", exist_ok=True
     )
 
-    IMG_SIZE, BATCH_SIZE, T, EPOCHS = 256, 16, 300, 200
+    IMG_SIZE, BATCH_SIZE, T, EPOCHS = 256, 32, 300, 200
 
     params = {
         "batch_size": BATCH_SIZE,
@@ -318,7 +323,7 @@ if __name__ == "__main__":
             labelleft=False,
         )  # labels along the bottom edge are off
         image, noise = forward_diffusion_sample(image, t)
-        show_tensor_image(image, save=1)
+        # show_tensor_image(image, save=1)
 
     model = SimpleUnet()
     print("Num params: ", sum(p.numel() for p in model.parameters()))
@@ -341,4 +346,4 @@ if __name__ == "__main__":
                 print(
                     f"Epoch {epoch:03d} | step {step:03d} Loss: {loss.item():0.5f} "
                 )
-                sample_plot_image(device, epoch)
+                # sample_plot_image(device, epoch)

@@ -47,7 +47,9 @@ class SinusoidalPositionEmbeddings(nn.Module):
         device = time.device
         half_dim = self.dim // 2
         embeddings = math.log(10000) / (half_dim - 1)
-        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
+        embeddings = torch.exp(
+            torch.arange(half_dim, device=device) * -embeddings
+        )
         embeddings = time[:, None] * embeddings[None, :]
         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
         # TODO: Double check the ordering here
@@ -61,7 +63,7 @@ class SimpleUnet(nn.Module):
 
     def __init__(self):
         super().__init__()
-        image_channels = 1
+        image_channels = 24
         down_channels = (64, 128, 256, 512, 1024)
         up_channels = (1024, 512, 256, 128, 64)
         out_dim = 1
@@ -93,7 +95,7 @@ class SimpleUnet(nn.Module):
         )
 
         # self.output = nn.Conv2d(up_channels[-1], 3, out_dim)
-        self.output = nn.Conv2d(up_channels[-1], 1, out_dim)
+        self.output = nn.Conv2d(up_channels[-1], 24, out_dim)
 
     def forward(self, x, timestep):
         # Embedd time
