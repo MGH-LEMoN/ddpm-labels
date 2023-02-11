@@ -7,14 +7,16 @@ import sys
 sys.path.append("/space/calico/1/users/Harsha/ddpm-labels")
 
 from datetime import datetime
+
+import numpy as np
 from tqdm import tqdm
+
+from ext.lab2im import edit_volumes
 from ext.lab2im.utils import (
-    load_volume,
     find_closest_number_divisible_by_m,
+    load_volume,
     save_volume,
 )
-from ext.lab2im import edit_volumes
-
 
 PRJCT_DIR = "/space/calico/1/users/Harsha/ddpm-labels"
 DATA_DIR = os.path.join(PRJCT_DIR, "data")
@@ -23,6 +25,7 @@ RESULTS_DIR = os.path.join(PRJCT_DIR, "results")
 LABEL_MAPS = "/cluster/vxmdata1/FS_Slim/proc/cleaned"
 LABEL_MAPS_COPY = os.path.join(DATA_DIR, "label-maps")
 LABEL_MAPS_COMPACT = os.path.join(DATA_DIR, "label-maps-compact")
+LABEL_MAPS_PADDED = os.path.join(DATA_DIR, "label-maps-padded")
 
 SLICE_SHAPE = (256, 256)
 
@@ -166,8 +169,18 @@ def copy_label_maps():
         shutil.copyfile(file, os.path.join(dst_dir, dst_file))
 
 
-def create_compact_label_maps(labels_dir=LABEL_MAPS_COPY):
-    result_dir = os.path.join(DATA_DIR, "label-maps-compact")
+def create_compact_label_maps(labels_dir=None, result_dir=None):
+    if not labels_dir:
+        labels_dir = LABEL_MAPS_COPY
+
+    if not os.path.isabs(labels_dir):
+        labels_dir = os.path.join(DATA_DIR, labels_dir)
+
+    if not result_dir:
+        result_dir = os.path.join(DATA_DIR, "label-maps-compact")
+
+    if not os.path.isabs(result_dir):
+        result_dir = os.path.join(DATA_DIR, result_dir)
 
     if not os.path.isdir(labels_dir):
         print("Input directory with Label maps does not exist")
@@ -182,30 +195,62 @@ def create_compact_label_maps(labels_dir=LABEL_MAPS_COPY):
     return maximum_size
 
 
-def pad_compact_label_maps(maximum_size):
-    pad_to_shape = []
-    for val in maximum_size:
-        pad_to_shape.append(
-            find_closest_number_divisible_by_m(val, 16, answer_type="higher")
-        )
+def pad_compact_label_maps(maximum_size, labels_dir=None, result_dir=None):
 
-    file_list = pathlib.Path(LABEL_MAPS_COMPACT).glob("*.mgz")
+    if isinstance(maximum_size, np.ndarray):
+        pad_to_shape = []
+        for val in maximum_size:
+            pad_to_shape.append(
+                find_closest_number_divisible_by_m(
+                    val, 32, answer_type="higher"
+                )
+            )
+            print(val, pad_to_shape)
+
+    if isinstance(maximum_size, (int, float)):
+        pad_to_shape = find_closest_number_divisible_by_m(
+            val, 32, answer_type="higher"
+        )
+        print(val, pad_to_shape)
+
+    if not labels_dir:
+        labels_dir = os.path.join(DATA_DIR, LABEL_MAPS_COMPACT)
+
+    if not os.path.isabs(labels_dir):
+        labels_dir = os.path.join(DATA_DIR, labels_dir)
+
+    if not result_dir:
+        result_dir = os.path.join(DATA_DIR, LABEL_MAPS_PADDED)
+
+    if not os.path.isabs(result_dir):
+        result_dir = os.path.join(DATA_DIR, result_dir)
+
+    file_list = pathlib.Path(labels_dir).glob("*.mgz")
 
     for file in file_list:
         volume, aff, header = load_volume(str(file), im_only=False)
         padded_volume = edit_volumes.pad_volume(volume, pad_to_shape)
-        save_volume(padded_volume, aff, header, str(file))
+        save_volume(
+            padded_volume, aff, header, os.path.join(result_dir, file.name)
+        )
 
 
 if __name__ == "__main__":
     # site_list = list_unique_sites()
-    # copy_label_maps()
-    # count_subjects_per_site(site_list)
-    # get_slice_shapes()
-    # write_labelmap_names()
+    # print(site_list)
+    # # copy_label_maps()
+    # # count_subjects_per_site(site_list)
+    # # get_slice_shapes()
+    # # write_labelmap_names()
 
-    # max_size = create_compact_label_maps()
-    # get_slice_shapes("ddpm_files_compact.txt")
-    # pad_compact_label_maps(max_size)
+    # max_size = create_compact_label_maps(
+    #     labels_dir="label-maps", result_dir="label-maps-compact"
+    # )
+    # # get_slice_shapes("ddpm_files_compact.txt")
+    # pad_compact_label_maps(
+    #     max_size, labels_dir="label-maps-compact", result_dir="label-maps-padded"
+    # )
     # write_labelmap_names(LABEL_MAPS_COMPACT, "ddpm_files_compact.txt")
-    get_slice_shapes("ddpm_files_compact.txt")
+    # get_slice_shapes("ddpm_files_compact.txt")
+    write_labelmap_names(LABEL_MAPS_PADDED, "ddpm_files_padded.txt")
+    get_slice_shapes("ddpm_files_padded.txt")

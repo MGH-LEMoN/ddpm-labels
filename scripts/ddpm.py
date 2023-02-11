@@ -3,7 +3,6 @@
 import os
 import sys
 
-
 sys.path.append("/space/calico/1/users/Harsha/ddpm-labels")
 import pathlib
 
@@ -11,34 +10,32 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ext.lab2im.utils import load_volume
-from ext.mindboggle.labels import extract_numbers_names_colors
+from matplotlib import colors
+from model import SimpleUnet
 from sklearn.model_selection import train_test_split
 from torch.optim import Adam
 from torch.utils import data
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from matplotlib import colors
+from utils import load_labelmap_names
 
-from model import SimpleUnet
-from utils import load_file_list
+from ext.lab2im.utils import load_volume
+from ext.mindboggle.labels import extract_numbers_names_colors
 
 
 # iterator dataset (for use with pathlib.Path generator as it is quick)
 class DDPMLabelsIterableDataset(torch.utils.data.IterableDataset):
     def __init__(self):
-        self.files = pathlib.Path(
-            "/cluster/vxmdata1/FS_Slim/proc/cleaned"
-        ).glob("*/aseg_23*.mgz")
+        self.files = pathlib.Path("/cluster/vxmdata1/FS_Slim/proc/cleaned").glob(
+            "*/aseg_23*.mgz"
+        )
         self.n_files = len(self.files)
 
     def __iter__(self):
         self.source = iter(self.data)
         for _, item in enumerate(self.source):
             vol = load_volume(item)
-            resized_vol = torch.unsqueeze(
-                torch.Tensor(vol.astype(np.uint8)), -1
-            )
+            resized_vol = torch.unsqueeze(torch.Tensor(vol.astype(np.uint8)), -1)
             yield resized_vol
 
 
@@ -53,10 +50,19 @@ class DDPMLabelsDataset(torch.utils.data.Dataset):
         resized_vol = torch.Tensor(vol.astype(np.uint8))
         resized_vol = torch.movedim(
             F.one_hot(resized_vol.to(torch.int64), num_classes=24),
-            (0, 1, 2),
-            (1, 2, 0),
+            -1,
+            0,
         )
-        return resized_vol
+
+        ## YB-20230209
+        ### # # K one hot -> (K-1) logits
+        ref_onehot = resized_vol
+        ref_logit = 7 * (ref_onehot[1:] - ref_onehot[0])
+        logit = torch.zeros([ref_logit.shape[0] + 1, *ref_logit.shape[1:]])
+        logit[1:] = ref_logit
+        ## YB-20230209
+
+        return logit.float()
 
     def __len__(self):
         return self.n_files
@@ -82,23 +88,19 @@ def forward_diffusion_sample(x_0, t, device="cpu"):
     returns the noisy version of it
     """
     noise = torch.randn_like(x_0, dtype=torch.float32)
-    sqrt_alphas_cumprod_t = get_index_from_list(
-        sqrt_alphas_cumprod, t, x_0.shape
-    )
+    sqrt_alphas_cumprod_t = get_index_from_list(sqrt_alphas_cumprod, t, x_0.shape)
     sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
         sqrt_one_minus_alphas_cumprod, t, x_0.shape
     )
     # mean + variance
     return sqrt_alphas_cumprod_t.to(device) * x_0.to(
         device
-    ) + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(
-        device
-    )
+    ) + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
 
 
 def load_transformed_dataset():
     data_transforms = [
-        transforms.RandomHorizontalFlip(),
+        # transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),  # Scales data into [0,1]
         # transforms.Lambda(lambda t: (t * 2) - 1) # Scale between [-1, 1]
     ]
@@ -164,13 +166,83 @@ def color_map_for_data():
     ]
     voxmorph_label_index_dict = dict(voxmorph_label_index)
     my_colors = [
-        fs_colors[fs_names.index(item)]
-        for item in voxmorph_label_index_dict.values()
+        fs_colors[fs_names.index(item)] for item in voxmorph_label_index_dict.values()
     ]
     cmap = colors.ListedColormap(np.array(my_colors) / 255)
     # plt.imshow(np.arange(max(voxmorph_label_index_dict.keys()))[None], cmap=cmap)
 
     return cmap
+
+
+def softmax0(logit0):
+    """(K-1) logits -> K probabilities"""
+    logit = torch.zeros([logit0.shape[0] + 1, *logit0.shape[1:]])
+    logit[1:] = logit0
+    return logit.softmax(0)
+
+
+# functions from YB
+from warnings import warn
+
+import matplotlib.colors as mcolors
+
+
+def _get_colormap_cat(colormap, nb_classes, dtype=None, device=None):
+    if colormap is None:
+        if not plt:
+            raise ImportError("Matplotlib not available")
+        if nb_classes <= 10:
+            colormap = plt.get_cmap("tab10")
+        elif nb_classes <= 20:
+            colormap = plt.get_cmap("tab20")
+        else:
+            warn("More than 20 classes: multiple classes will share" "the same color.")
+            colormap = plt.get_cmap("tab20")
+    elif isinstance(colormap, str):
+        colormap = plt.get_cmap(colormap)
+    if isinstance(colormap, mcolors.Colormap):
+        n = nb_classes
+        colormap = [colormap(i)[:3] for i in range(n)]
+        # colormap = [colormap(i/(n-1))[:3] for i in range(n)]
+    colormap = torch.as_tensor(colormap, dtype=dtype, device=device)
+    return colormap
+
+
+def prob_to_rgb(image, implicit=False, colormap=None):
+    """Convert soft probabilities to an RGB image.
+    Parameters
+    ----------
+    image : (*batch, K, H, W)
+        A (batch of) 2D image, with categories along the 'K' dimension.
+    implicit : bool, default=False
+        Whether the background class is implicit.
+        Else, the first class is assumed to be the background class.
+    colormap : (K, 3) tensor or str, optional
+        A colormap or the name of a matplotlib colormap.
+    Returns
+    -------
+    image : (*batch, H, W, 3)
+        A (batch of) RGB image.
+    """
+
+    if not implicit:
+        image = image[..., 1:, :, :]
+
+    # added by YB
+    if not image.dtype.is_floating_point:
+        image = image.to(torch.get_default_dtype())
+
+    *batch, nb_classes, height, width = image.shape
+    shape = (height, width)
+    colormap = _get_colormap_cat(colormap, nb_classes, image.dtype, image.device)
+
+    cimage = image.new_zeros([*batch, *shape, 3])
+    for i in range(nb_classes):
+        cimage += image[..., i, :, :, None] * colormap[i % len(colormap)]
+
+    # print(cimage.max(), cimage.min())
+
+    return cimage.clamp_(0, 1)
 
 
 # display a few images to check the label maps
@@ -182,40 +254,77 @@ def show_images(data, num_samples=20, cols=4):
         if i == num_samples:
             break
         plt.subplot(num_samples // cols + 3, cols, i + 1)
-        plt.imshow(img[0], cmap=color_map_for_data(), interpolation="nearest")
+
+        ### YB-20230209
+        img = softmax0(img)
+        img = prob_to_rgb(img, implicit=False, colormap=color_map_for_data())
+        plt.imshow(img, interpolation="nearest")
+        ### YB-20230209
+
+        # plt.imshow(img[0], cmap=color_map_for_data(), interpolation="nearest")
         plt.xticks([])
         plt.yticks([])
     plt.subplots_adjust(wspace=0.025, hspace=0.025)
     save_file = os.path.join(
-        "/space/calico/1/users/Harsha/ddpm-labels/output", "sample_labels.png"
+        "/space/calico/1/users/Harsha/ddpm-labels/output/experiment_01",
+        "sample_labels.png",
     )
     plt.savefig(save_file, bbox_inches="tight")
 
 
-def show_tensor_image(image, save=0):
-    reverse_transforms = transforms.Compose(
-        [
-            # transforms.Lambda(lambda t: (t + 1) / 2),
-            # transforms.Lambda(lambda t: t.permute(1, 2, 0)), # CHW to HWC
-            # transforms.Lambda(lambda t: t * 255.),
-            transforms.Lambda(lambda t: np.squeeze(t.numpy().astype(np.uint8))),
-            transforms.ToPILImage(mode="L"),
-        ]
-    )
+# def show_tensor_image(image, save=0):
+#     reverse_transforms = transforms.Compose(
+#         [
+#             # transforms.Lambda(lambda t: (t + 1) / 2),
+#             # transforms.Lambda(lambda t: t.permute(1, 2, 0)), # CHW to HWC
+#             # transforms.Lambda(lambda t: t * 255.),
+#             transforms.Lambda(lambda t: np.squeeze(t.numpy().astype(np.uint8))),
+#             transforms.ToPILImage(mode="L"),
+#         ]
+#     )
 
+#     # Take first image of batch
+#     if len(image.shape) == 4:
+#         image = image[0, :, :, :]
+#     plt.imshow(
+#         np.squeeze(reverse_transforms(image)),
+#         cmap=color_map_for_data(),
+#         interpolation="nearest",
+#     )
+#     plt.subplots_adjust(wspace=0.025)
+#     if save:
+#         save_file = os.path.join(
+#             "/space/calico/1/users/Harsha/ddpm-labels/output",
+#             "forward-preocess.png",
+#         )
+#         plt.savefig(save_file, bbox_inches="tight")
+
+
+def show_tensor_image(image, save=0):
+    # reverse_transforms = transforms.Compose(
+    #     [
+    #         # transforms.Lambda(lambda t: (t + 1) / 2),
+    #         # transforms.Lambda(lambda t: t.permute(1, 2, 0)), # CHW to HWC
+    #         # transforms.Lambda(lambda t: t * 255.),
+    #         transforms.Lambda(lambda t: np.squeeze(t.numpy().astype(np.uint8))),
+    #         transforms.ToPILImage(mode="L"),
+    #     ]
+    # )
+
+    ### YB-20230209
     # Take first image of batch
     if len(image.shape) == 4:
         image = image[0, :, :, :]
-    plt.imshow(
-        np.squeeze(reverse_transforms(image)),
-        cmap=color_map_for_data(),
-        interpolation="nearest",
-    )
+    img = softmax0(image)
+    img = prob_to_rgb(img, implicit=False, colormap=color_map_for_data())
+    plt.imshow(img, interpolation="nearest")
+    ### YB-20230209
+
     plt.subplots_adjust(wspace=0.025)
     if save:
         save_file = os.path.join(
-            "/space/calico/1/users/Harsha/ddpm-labels/output",
-            "forward-preocess.png",
+            "/space/calico/1/users/Harsha/ddpm-labels/output/experiment_01",
+            "forward-process.png",
         )
         plt.savefig(save_file, bbox_inches="tight")
 
@@ -224,7 +333,7 @@ def show_tensor_image(image, save=0):
 def sample_plot_image(device, epoch):
     # Sample noise
     img_size = IMG_SIZE
-    img = torch.randn((1, 1, img_size, img_size), device=device)
+    img = torch.randn((1, 24, *img_size), device=device)
     plt.figure(figsize=(15, 15))
     num_images = 10
     stepsize = int(T / num_images)
@@ -247,7 +356,7 @@ def sample_plot_image(device, epoch):
             show_tensor_image(img.detach().cpu(), save=0)
     plt.subplots_adjust(wspace=0.025)
     save_file = os.path.join(
-        "/space/calico/1/users/Harsha/ddpm-labels/output",
+        "/space/calico/1/users/Harsha/ddpm-labels/output/experiment_01",
         f"reverse-image_{epoch:03d}.png",
     )
     plt.savefig(save_file, bbox_inches="tight")
@@ -255,10 +364,11 @@ def sample_plot_image(device, epoch):
 
 if __name__ == "__main__":
     os.makedirs(
-        "/space/calico/1/users/Harsha/ddpm-labels/output", exist_ok=True
+        "/space/calico/1/users/Harsha/ddpm-labels/output/experiment_01",
+        exist_ok=True,
     )
 
-    IMG_SIZE, BATCH_SIZE, T, EPOCHS = 256, 32, 300, 200
+    IMG_SIZE, BATCH_SIZE, T, EPOCHS = (192, 224), 32, 300, 1000
 
     params = {
         "batch_size": BATCH_SIZE,
@@ -267,7 +377,7 @@ if __name__ == "__main__":
         "worker_init_fn": np.random.seed(42),
     }
 
-    filename = load_file_list()[:128]  # HACK
+    filename = load_labelmap_names("ddpm_files_padded.txt")
 
     partition = {}
     partition["train"], partition["validation"] = train_test_split(
@@ -293,17 +403,17 @@ if __name__ == "__main__":
     sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
     sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
-    posterior_variance = (
-        betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
-    )
+    posterior_variance = betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
 
+    # TODO: not using transformed data at all
     transformed_data = load_transformed_dataset()
     dataloader = DataLoader(
         training_set, batch_size=BATCH_SIZE, shuffle=True, drop_last=True
     )
 
     # Simulate forward diffusion
-    image = next(iter(dataloader))
+    # image = next(iter(dataloader))
+    image = next(iter(training_generator))
 
     plt.figure(figsize=(15, 15))
     num_images = 10
@@ -323,7 +433,7 @@ if __name__ == "__main__":
             labelleft=False,
         )  # labels along the bottom edge are off
         image, noise = forward_diffusion_sample(image, t)
-        # show_tensor_image(image, save=1)
+        show_tensor_image(image, save=1)
 
     model = SimpleUnet()
     print("Num params: ", sum(p.numel() for p in model.parameters()))
@@ -331,7 +441,6 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
     optimizer = Adam(model.parameters(), lr=0.001)
-    epochs = 200  # Try more!
 
     for epoch in range(EPOCHS):
         for step, batch in enumerate(dataloader):
@@ -342,8 +451,6 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-            if epoch % 25 == 0 and step == 0:
-                print(
-                    f"Epoch {epoch:03d} | step {step:03d} Loss: {loss.item():0.5f} "
-                )
-                # sample_plot_image(device, epoch)
+            if epoch % 10 == 0 and step == 0:
+                print(f"Epoch {epoch:03d} | step {step:03d} Loss: {loss.item():0.5f} ")
+                sample_plot_image(device, epoch)
