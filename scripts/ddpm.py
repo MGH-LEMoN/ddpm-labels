@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from matplotlib import colors
 from model import SimpleUnet
 from sklearn.model_selection import train_test_split
 from torch.optim import Adam
@@ -18,24 +17,26 @@ from torch.utils import data
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from utils import load_labelmap_names
+from yael_funcs import color_map_for_data, prob_to_rgb, softmax0
 
 from ext.lab2im.utils import load_volume
-from ext.mindboggle.labels import extract_numbers_names_colors
 
 
 # iterator dataset (for use with pathlib.Path generator as it is quick)
 class DDPMLabelsIterableDataset(torch.utils.data.IterableDataset):
     def __init__(self):
-        self.files = pathlib.Path("/cluster/vxmdata1/FS_Slim/proc/cleaned").glob(
-            "*/aseg_23*.mgz"
-        )
+        self.files = pathlib.Path(
+            "/cluster/vxmdata1/FS_Slim/proc/cleaned"
+        ).glob("*/aseg_23*.mgz")
         self.n_files = len(self.files)
 
     def __iter__(self):
         self.source = iter(self.data)
         for _, item in enumerate(self.source):
             vol = load_volume(item)
-            resized_vol = torch.unsqueeze(torch.Tensor(vol.astype(np.uint8)), -1)
+            resized_vol = torch.unsqueeze(
+                torch.Tensor(vol.astype(np.uint8)), -1
+            )
             yield resized_vol
 
 
@@ -88,14 +89,18 @@ def forward_diffusion_sample(x_0, t, device="cpu"):
     returns the noisy version of it
     """
     noise = torch.randn_like(x_0, dtype=torch.float32)
-    sqrt_alphas_cumprod_t = get_index_from_list(sqrt_alphas_cumprod, t, x_0.shape)
+    sqrt_alphas_cumprod_t = get_index_from_list(
+        sqrt_alphas_cumprod, t, x_0.shape
+    )
     sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
         sqrt_one_minus_alphas_cumprod, t, x_0.shape
     )
     # mean + variance
     return sqrt_alphas_cumprod_t.to(device) * x_0.to(
         device
-    ) + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)
+    ) + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(
+        device
+    )
 
 
 def load_transformed_dataset():
@@ -146,103 +151,6 @@ def sample_timestep(x, t):
     else:
         noise = torch.randn_like(x)
         return model_mean + torch.sqrt(posterior_variance_t) * noise
-
-
-def color_map_for_data():
-    _, fs_names, fs_colors = extract_numbers_names_colors(
-        "/usr/local/freesurfer/dev/FreeSurferColorLUT.txt"
-    )
-
-    with open("/cluster/vxmdata1/FS_Slim/proc/readme", "r") as f:
-        voxmorph_label_index = f.read().splitlines()
-
-    voxmorph_label_index = [
-        item.strip().split(":") for item in voxmorph_label_index if item != ""
-    ][
-        -24:
-    ]  # HACK
-    voxmorph_label_index = [
-        [int(item[0]), item[1].strip()] for item in voxmorph_label_index
-    ]
-    voxmorph_label_index_dict = dict(voxmorph_label_index)
-    my_colors = [
-        fs_colors[fs_names.index(item)] for item in voxmorph_label_index_dict.values()
-    ]
-    cmap = colors.ListedColormap(np.array(my_colors) / 255)
-    # plt.imshow(np.arange(max(voxmorph_label_index_dict.keys()))[None], cmap=cmap)
-
-    return cmap
-
-
-def softmax0(logit0):
-    """(K-1) logits -> K probabilities"""
-    logit = torch.zeros([logit0.shape[0] + 1, *logit0.shape[1:]])
-    logit[1:] = logit0
-    return logit.softmax(0)
-
-
-# functions from YB
-from warnings import warn
-
-import matplotlib.colors as mcolors
-
-
-def _get_colormap_cat(colormap, nb_classes, dtype=None, device=None):
-    if colormap is None:
-        if not plt:
-            raise ImportError("Matplotlib not available")
-        if nb_classes <= 10:
-            colormap = plt.get_cmap("tab10")
-        elif nb_classes <= 20:
-            colormap = plt.get_cmap("tab20")
-        else:
-            warn("More than 20 classes: multiple classes will share" "the same color.")
-            colormap = plt.get_cmap("tab20")
-    elif isinstance(colormap, str):
-        colormap = plt.get_cmap(colormap)
-    if isinstance(colormap, mcolors.Colormap):
-        n = nb_classes
-        colormap = [colormap(i)[:3] for i in range(n)]
-        # colormap = [colormap(i/(n-1))[:3] for i in range(n)]
-    colormap = torch.as_tensor(colormap, dtype=dtype, device=device)
-    return colormap
-
-
-def prob_to_rgb(image, implicit=False, colormap=None):
-    """Convert soft probabilities to an RGB image.
-    Parameters
-    ----------
-    image : (*batch, K, H, W)
-        A (batch of) 2D image, with categories along the 'K' dimension.
-    implicit : bool, default=False
-        Whether the background class is implicit.
-        Else, the first class is assumed to be the background class.
-    colormap : (K, 3) tensor or str, optional
-        A colormap or the name of a matplotlib colormap.
-    Returns
-    -------
-    image : (*batch, H, W, 3)
-        A (batch of) RGB image.
-    """
-
-    if not implicit:
-        image = image[..., 1:, :, :]
-
-    # added by YB
-    if not image.dtype.is_floating_point:
-        image = image.to(torch.get_default_dtype())
-
-    *batch, nb_classes, height, width = image.shape
-    shape = (height, width)
-    colormap = _get_colormap_cat(colormap, nb_classes, image.dtype, image.device)
-
-    cimage = image.new_zeros([*batch, *shape, 3])
-    for i in range(nb_classes):
-        cimage += image[..., i, :, :, None] * colormap[i % len(colormap)]
-
-    # print(cimage.max(), cimage.min())
-
-    return cimage.clamp_(0, 1)
 
 
 # display a few images to check the label maps
@@ -403,7 +311,9 @@ if __name__ == "__main__":
     sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
     sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
     sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
-    posterior_variance = betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
+    posterior_variance = (
+        betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
+    )
 
     # TODO: not using transformed data at all
     transformed_data = load_transformed_dataset()
@@ -452,5 +362,7 @@ if __name__ == "__main__":
             optimizer.step()
 
             if epoch % 10 == 0 and step == 0:
-                print(f"Epoch {epoch:03d} | step {step:03d} Loss: {loss.item():0.5f} ")
+                print(
+                    f"Epoch {epoch:03d} | step {step:03d} Loss: {loss.item():0.5f} "
+                )
                 sample_plot_image(device, epoch)
