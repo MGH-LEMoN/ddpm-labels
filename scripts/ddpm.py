@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from model import SimpleUnet
+from model1 import SimpleUnet
+from model2 import Unet
 from sklearn.model_selection import train_test_split
 from torch.optim import Adam
 from torch.utils import data
@@ -20,7 +21,6 @@ from utils import load_labelmap_names
 from yael_funcs import color_map_for_data, prob_to_rgb, softmax0
 
 from ext.lab2im.utils import load_volume
-
 
 # iterator dataset (for use with pathlib.Path generator as it is quick)
 class DDPMLabelsIterableDataset(torch.utils.data.IterableDataset):
@@ -285,7 +285,7 @@ if __name__ == "__main__":
         "worker_init_fn": np.random.seed(42),
     }
 
-    filename = load_labelmap_names("ddpm_files_padded.txt")
+    filename = load_labelmap_names("ddpm_files_padded.txt")[:64]
 
     partition = {}
     partition["train"], partition["validation"] = train_test_split(
@@ -346,6 +346,7 @@ if __name__ == "__main__":
         show_tensor_image(image, save=1)
 
     model = SimpleUnet()
+    # model = Unet(dim=16, channels=24, dim_mults=(2, 4, 8, 16, 32, 64))
     print("Num params: ", sum(p.numel() for p in model.parameters()))
 
     device = "cuda" if torch.cuda.is_available() else "cpu"

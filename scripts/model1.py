@@ -2,6 +2,7 @@ import math
 
 import torch
 from torch import nn
+from torchinfo import summary
 
 
 class Block(nn.Module):
@@ -97,7 +98,7 @@ class SimpleUnet(nn.Module):
         # self.output = nn.Conv2d(up_channels[-1], 3, out_dim)
         self.output = nn.Conv2d(up_channels[-1], 24, out_dim)
 
-    def forward(self, x, timestep):
+    def forward(self, x, timestep=None):
         # Embedd time
         t = self.time_mlp(timestep)
         # Initial conv
@@ -113,3 +114,15 @@ class SimpleUnet(nn.Module):
             x = torch.cat((x, residual_x), dim=1)
             x = up(x, t)
         return self.output(x)
+
+
+if __name__ == "__main__":
+    device = "cuda" if torch.cuda.is_available() else "cpu"  # PyTorch v0.4.0
+    model = SimpleUnet().to(device)
+    batch_size = 1
+    summary(
+        model,
+        input_size=[(batch_size, 24, 192, 224), (batch_size,)],
+        col_names=["input_size", "output_size", "num_params"],
+        depth=5,
+    )
