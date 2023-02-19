@@ -34,7 +34,8 @@ def color_map_for_data():
     ]
     voxmorph_label_index_dict = dict(voxmorph_label_index)
     my_colors = [
-        fs_colors[fs_names.index(item)] for item in voxmorph_label_index_dict.values()
+        fs_colors[fs_names.index(item)]
+        for item in voxmorph_label_index_dict.values()
     ]
     cmap = colors.ListedColormap(np.array(my_colors) / 255)
     # plt.imshow(np.arange(max(voxmorph_label_index_dict.keys()))[None], cmap=cmap)
@@ -51,14 +52,16 @@ def _get_colormap_cat(colormap, nb_classes, dtype=None, device=None):
         elif nb_classes <= 20:
             colormap = plt.get_cmap("tab20")
         else:
-            warn("More than 20 classes: multiple classes will share" "the same color.")
+            warn(
+                "More than 20 classes: multiple classes will share"
+                "the same color."
+            )
             colormap = plt.get_cmap("tab20")
     elif isinstance(colormap, str):
         colormap = plt.get_cmap(colormap)
     if isinstance(colormap, mcolors.Colormap):
         n = nb_classes
         colormap = [colormap(i)[:3] for i in range(n)]
-        # colormap = [colormap(i/(n-1))[:3] for i in range(n)]
     colormap = torch.as_tensor(colormap, dtype=dtype, device=device)
     return colormap
 
@@ -89,7 +92,9 @@ def prob_to_rgb(image, implicit=False, colormap=None):
 
     *batch, nb_classes, height, width = image.shape
     shape = (height, width)
-    colormap = _get_colormap_cat(colormap, nb_classes, image.dtype, image.device)
+    colormap = _get_colormap_cat(
+        colormap, nb_classes, image.dtype, image.device
+    )
 
     cimage = image.new_zeros([*batch, *shape, 3])
     for i in range(nb_classes):
