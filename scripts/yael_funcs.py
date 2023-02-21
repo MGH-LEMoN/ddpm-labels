@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from matplotlib import colors
+import torch.nn.functional as F
 
 from ext.mindboggle.labels import extract_numbers_names_colors
 
@@ -101,3 +102,31 @@ def prob_to_rgb(image, implicit=False, colormap=None):
         cimage += image[..., i, :, :, None] * colormap[i % len(colormap)]
 
     return cimage.clamp_(0, 1)
+
+
+def image_to_logit(image):
+    resized_vol = torch.Tensor(image.astype(np.uint8))
+    resized_vol = torch.movedim(
+        F.one_hot(resized_vol.to(torch.int64), num_classes=24),
+        -1,
+        0,
+    )
+
+    ## YB-20230209
+    ### # # K one hot -> (K-1) logits
+    ref_onehot = resized_vol
+    ref_logit = 7 * (ref_onehot[1:] - ref_onehot[0])
+    logit = torch.zeros([ref_logit.shape[0] + 1, *ref_logit.shape[1:]])
+    logit[1:] = ref_logit
+    ## YB-20230209
+
+    return logit.float()
+
+
+def logit_to_image(img):
+    img = softmax0(img)
+    # print(img.shape)
+    img = prob_to_rgb(img, implicit=False, colormap=color_map_for_data())
+    # print(img.shape)
+    # plt.imshow(img, interpolation="nearest")
+    return img
