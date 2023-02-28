@@ -12,11 +12,8 @@ import numpy as np
 from tqdm import tqdm
 
 from ext.lab2im import edit_volumes
-from ext.lab2im.utils import (
-    find_closest_number_divisible_by_m,
-    load_volume,
-    save_volume,
-)
+from ext.lab2im.utils import (find_closest_number_divisible_by_m, load_volume,
+                              save_volume)
 
 PRJCT_DIR = "/space/calico/1/users/Harsha/ddpm-labels"
 DATA_DIR = os.path.join(PRJCT_DIR, "data")
@@ -46,16 +43,6 @@ def main_timer(func):
         )
 
     return function_wrapper
-
-
-def process(filename):
-    """Removes empty lines and lines that contain only whitespace, and
-    lines with comments"""
-
-    with open(filename) as in_file, open(filename, "r+") as out_file:
-        for line in in_file:
-            if not line.strip().startswith("#") and not line.isspace():
-                out_file.writelines(line)
 
 
 def write_labelmap_names(folder=LABEL_MAPS, file_name=None):
@@ -201,16 +188,12 @@ def pad_compact_label_maps(maximum_size, labels_dir=None, result_dir=None):
         pad_to_shape = []
         for val in maximum_size:
             pad_to_shape.append(
-                find_closest_number_divisible_by_m(
-                    val, 32, answer_type="higher"
-                )
+                find_closest_number_divisible_by_m(val, 32, answer_type="higher")
             )
             print(val, pad_to_shape)
 
     if isinstance(maximum_size, (int, float)):
-        pad_to_shape = find_closest_number_divisible_by_m(
-            val, 32, answer_type="higher"
-        )
+        pad_to_shape = find_closest_number_divisible_by_m(val, 32, answer_type="higher")
         print(val, pad_to_shape)
 
     if not labels_dir:
@@ -230,9 +213,22 @@ def pad_compact_label_maps(maximum_size, labels_dir=None, result_dir=None):
     for file in file_list:
         volume, aff, header = load_volume(str(file), im_only=False)
         padded_volume = edit_volumes.pad_volume(volume, pad_to_shape)
-        save_volume(
-            padded_volume, aff, header, os.path.join(result_dir, file.name)
-        )
+        save_volume(padded_volume, aff, header, os.path.join(result_dir, file.name))
+
+
+def group_labels():
+    new_labels = [0, 1, 2, 3]
+
+    background = [0]
+    wm_labels = [1, 7, 9, 12, 14, 20, 22]
+    gm_labels = [2, 4, 5, 6, 10, 15, 17, 18, 19, 21]
+    csf_labels = [3, 8, 11, 13, 16, 23]
+
+    old_labels = [background, wm_labels, gm_labels, csf_labels]
+
+    my_dict = {}
+    for (a, b) in zip(old_labels, new_labels):
+        my_dict.update(dict.fromkeys(a, b))
 
 
 if __name__ == "__main__":

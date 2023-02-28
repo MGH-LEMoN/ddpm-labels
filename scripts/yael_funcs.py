@@ -1,20 +1,35 @@
+import glob
+import os
 from warnings import warn
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from matplotlib import colors
 import torch.nn.functional as F
+import utils as my_utils
 
+from ext.lab2im import utils
 from ext.mindboggle.labels import extract_numbers_names_colors
 
 
-def softmax0(logit0):
+def softmax_jei(logit):
+    """(K-1) logits -> K probabilities"""
+    return logit.softmax(0)
+
+
+def softmax_yael(logit0):
     """(K-1) logits -> K probabilities"""
     logit = torch.zeros([logit0.shape[0] + 1, *logit0.shape[1:]])
     logit[1:] = logit0
     return logit.softmax(0)
+
+
+def logit_yael(prob):
+    """K probabilities -> (K-1) logits"""
+    logit = prob.clamp_min(1e-8).log()
+    logit = logit[1:] - logit[0]
+    return logit
 
 
 def color_map_for_data():
@@ -25,6 +40,7 @@ def color_map_for_data():
     with open("/cluster/vxmdata1/FS_Slim/proc/readme", "r") as f:
         voxmorph_label_index = f.read().splitlines()
 
+    # get the last 24 lines of the readme file (format--> id: name)
     voxmorph_label_index = [
         item.strip().split(":") for item in voxmorph_label_index if item != ""
     ][
@@ -35,11 +51,13 @@ def color_map_for_data():
     ]
     voxmorph_label_index_dict = dict(voxmorph_label_index)
     my_colors = [
-        fs_colors[fs_names.index(item)]
-        for item in voxmorph_label_index_dict.values()
+        fs_colors[fs_names.index(item)] for item in voxmorph_label_index_dict.values()
     ]
-    cmap = colors.ListedColormap(np.array(my_colors) / 255)
+    cmap = mcolors.ListedColormap(np.array(my_colors) / 255)
+
+    # fig = plt.figure()
     # plt.imshow(np.arange(max(voxmorph_label_index_dict.keys()))[None], cmap=cmap)
+    # plt.show()
 
     return cmap
 
@@ -53,10 +71,7 @@ def _get_colormap_cat(colormap, nb_classes, dtype=None, device=None):
         elif nb_classes <= 20:
             colormap = plt.get_cmap("tab20")
         else:
-            warn(
-                "More than 20 classes: multiple classes will share"
-                "the same color."
-            )
+            warn("More than 20 classes: multiple classes will share" "the same color.")
             colormap = plt.get_cmap("tab20")
     elif isinstance(colormap, str):
         colormap = plt.get_cmap(colormap)
@@ -93,9 +108,7 @@ def prob_to_rgb(image, implicit=False, colormap=None):
 
     *batch, nb_classes, height, width = image.shape
     shape = (height, width)
-    colormap = _get_colormap_cat(
-        colormap, nb_classes, image.dtype, image.device
-    )
+    colormap = _get_colormap_cat(colormap, nb_classes, image.dtype, image.device)
 
     cimage = image.new_zeros([*batch, *shape, 3])
     for i in range(nb_classes):
@@ -104,29 +117,68 @@ def prob_to_rgb(image, implicit=False, colormap=None):
     return cimage.clamp_(0, 1)
 
 
-def image_to_logit(image):
+def image_to_logit(image, jei_flag=False):
     resized_vol = torch.Tensor(image.astype(np.uint8))
+
+    # one-hot encode the label map and
+    # HWC to CHW and add batch dimension
     resized_vol = torch.movedim(
         F.one_hot(resized_vol.to(torch.int64), num_classes=24),
         -1,
         0,
     )
-
-    ## YB-20230209
-    ### # # K one hot -> (K-1) logits
-    ref_onehot = resized_vol
-    ref_logit = 7 * (ref_onehot[1:] - ref_onehot[0])
-    logit = torch.zeros([ref_logit.shape[0] + 1, *ref_logit.shape[1:]])
-    logit[1:] = ref_logit
-    ## YB-20230209
-
+    if jei_flag:
+        logit = resized_vol * 7 - 3.5
+    else:
+        logit = 7 * (resized_vol[1:] - resized_vol[0])
     return logit.float()
 
 
-def logit_to_image(img):
-    img = softmax0(img)
-    # print(img.shape)
-    img = prob_to_rgb(img, implicit=False, colormap=color_map_for_data())
-    # print(img.shape)
-    # plt.imshow(img, interpolation="nearest")
+def logit_to_image(img, jei_flag=False):
+    if jei_flag:
+        img = softmax_jei(img)
+    else:
+        img = softmax_yael(img)
+
+    img = prob_to_rgb(img, implicit=True, colormap=color_map_for_data())
+
     return img
+
+
+def plot_sample_label_map():
+    # take a sample file and plot it
+    files = sorted(
+        glob.glob(os.path.join(my_utils.DATA_DIR, "test-maps-padded", "*.mgz"))
+    )
+    curr_vol = utils.load_volume(files[0])
+    plt.imshow(curr_vol, cmap=color_map_for_data(), interpolation="nearest")
+    plt.show()
+
+    return curr_vol
+
+
+if __name__ == "__main__":
+    curr_vol = plot_sample_label_map()
+
+    # one-hot encode the label map
+    output = F.one_hot(
+        torch.Tensor(curr_vol.astype(np.uint8)).to(torch.long), num_classes=24
+    )
+    print(output.shape)
+
+    # HWC to CHW
+    output1 = output.permute(2, 0, 1)
+
+    # add batch dimension
+    output = output1.unsqueeze(0)
+
+    rgb_output = prob_to_rgb(output, implicit=True, colormap=color_map_for_data())
+    print(rgb_output.shape)
+    fig2 = plt.figure()
+    plt.imshow(rgb_output[0])
+
+    plt.imshow(logit_to_image(image_to_logit(curr_vol, False), False))
+    plt.show()
+
+    plt.imshow(logit_to_image(image_to_logit(curr_vol, True), True))
+    plt.show()
