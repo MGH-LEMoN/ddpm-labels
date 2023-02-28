@@ -3,20 +3,16 @@
 import os
 import random
 import sys
-from argparse import ArgumentParser
 
-sys.path.append("/space/calico/1/users/Harsha/ddpm-labels")
+sys.path.append(os.getcwd())
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as F
 from beta_schedule import closed_form_equations
 from data_loaders import DDPMLabelsDataset
 from ddpm_config import Configuration
 from losses import forward_diffusion_sample, get_index_from_list, p_losses
-from model1 import SimpleUnet
-from model2 import Unet
 from plotting import plot_forward_process, show_images
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -28,6 +24,9 @@ from yael_funcs import (
     softmax_jei,
     softmax_yael,
 )
+
+from ddpm_labels.models.model1 import SimpleUnet
+from ddpm_labels.models.model2 import Unet
 
 
 @torch.no_grad()
