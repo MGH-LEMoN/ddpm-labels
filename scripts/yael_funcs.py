@@ -134,15 +134,9 @@ def image_to_logit(args, image):
     return logit.float()
 
 
-def logit_to_image(img, jei_flag=False):
-    if jei_flag:
-        img = softmax_jei(img)
-    else:
-        img = softmax_yael(img)
-
-    img = prob_to_rgb(img, implicit=True, colormap=color_map_for_data())
-
-    return img
+def logit_to_image(config, img):
+    func = softmax_jei if config.jei_flag else softmax_yael
+    return prob_to_rgb(func(img), implicit=True, colormap=color_map_for_data())
 
 
 def plot_sample_label_map():

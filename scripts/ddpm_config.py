@@ -14,7 +14,6 @@ class Configuration:
     """
 
     def __init__(self):
-
         now = datetime.now()
         dir_flag = now.strftime("%Y%m%d")  # -%H%M%S
         self.logdir = os.path.join(
@@ -27,12 +26,13 @@ class Configuration:
 
         self.EPOCHS = 1000
         self.BATCH_SIZE = 32
-        self.T = 500
+        self.T = 1000
         self.IMG_SIZE = (192, 224)
         self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.jei_flag = True
-        self.group_labels = True  # see group_labels() in utils.py for more info
+        self.group_labels = True  # see group_labels() in utils.py
+        self.save_images = True
 
         self.save_checkpoint = True
         self.beta_schedule = "linear"
@@ -53,6 +53,8 @@ class Configuration:
         self.learning_rate = 1e-5
         self.loss_type = "l2"
         # "l1" | "l2" | "huber"
+
+        self.plot_time_steps = list(np.arange(0, self.T, 100)) + [self.T - 1]
 
     def _write_config(self, file_name=None):
         """Write configuration to a file

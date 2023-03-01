@@ -183,7 +183,6 @@ def create_compact_label_maps(labels_dir=None, result_dir=None):
 
 
 def pad_compact_label_maps(maximum_size, labels_dir=None, result_dir=None):
-
     if isinstance(maximum_size, np.ndarray):
         pad_to_shape = []
         for val in maximum_size:
@@ -227,7 +226,7 @@ def group_labels():
     old_labels = [background, wm_labels, gm_labels, csf_labels]
 
     my_dict = {}
-    for (a, b) in zip(old_labels, new_labels):
+    for a, b in zip(old_labels, new_labels):
         my_dict.update(dict.fromkeys(a, b))
 
     return my_dict

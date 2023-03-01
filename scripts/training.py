@@ -3,12 +3,11 @@ import os
 import numpy as np
 import torch
 from accelerate import Accelerator, find_executable_batch_size
-from data_loaders import DDPMLabelsDataset
-from ddpm_config import Configuration
-from losses import p_losses
+from losses import p_losses, reverse_diffusion_sample
+from plotting import plot_forward_process
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from utils import load_labelmap_names
+from yael_funcs import logit_to_image
 
 from ddpm_labels.models.model1 import SimpleUnet
 from ddpm_labels.models.model2 import Unet
@@ -38,11 +37,22 @@ def auto_train(args, dataset, closed_form_calculations):
         exit()
 
 
+@torch.no_grad()
+def get_denoised_image(config, model, x_noise, t, cf_results):
+    # remove noise
+    img = reverse_diffusion_sample(model, x_noise, t, cf_results)
+
+    # turn back into RGB image
+    denoised_image = logit_to_image(config, img[0].detach().cpu())
+
+    return denoised_image
+
+
 def train(config, training_set, cf_results):
     model = SimpleUnet(config.image_channels)
-    model = Unet(
-        dim=16, channels=config.image_channels, dim_mults=(2, 4, 8, 16, 32, 64)
-    )
+    # model = Unet(
+    #     dim=16, channels=config.image_channels, dim_mults=(2, 4, 8, 16, 32, 64)
+    # )
 
     model.to(config.DEVICE)
     optimizer = Adam(model.parameters(), lr=config.learning_rate)
@@ -74,8 +84,7 @@ def train(config, training_set, cf_results):
         # writing loss value to writer object
         print(f"Epoch {epoch:03d} | Loss: {epoch_loss/training_set.n_files:0.5f}")
 
-        with config.writer as fn:
-            fn.add_scalar("training_loss", epoch_loss / len(training_set), epoch)
+        config.writer.add_scalar("training_loss", epoch_loss / len(training_set), epoch)
 
         # Saving model every 25 epochs
         if config.save_checkpoint:
@@ -85,4 +94,26 @@ def train(config, training_set, cf_results):
                     os.path.join(config.logdir, f"model_{epoch:04d}"),
                 )
 
-    # sample_plot_image(config.device, epoch)
+        if config.save_images:
+            if epoch == 1 or epoch % 5 == 0:
+                # plot reverse diffusion
+                x_noise = torch.randn(
+                    (1, config.image_channels, *config.IMG_SIZE),
+                    device=config.DEVICE,
+                )
+                plot_forward_process(
+                    config,
+                    [
+                        get_denoised_image(
+                            config,
+                            model,
+                            x_noise,
+                            torch.full((1,), t, device=config.DEVICE, dtype=torch.long),
+                            cf_results,
+                        )
+                        for t in config.plot_time_steps
+                    ],
+                    file_name=f"reverse_process-{epoch:03d}.png",
+                )
+
+    config.writer.close()

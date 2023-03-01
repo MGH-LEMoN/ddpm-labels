@@ -2,13 +2,14 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from yael_funcs import (color_map_for_data, prob_to_rgb, softmax_jei,
                         softmax_yael)
 
 
 # source: https://pytorch.org/vision/stable/auto_examples/plot_transforms.html#sphx-glr-auto-examples-plot-transforms-py
 def plot_forward_process(
-    config, imgs, with_orig=False, row_title=None, **imshow_kwargs
+    config, imgs, file_name, with_orig=False, row_title=None, **imshow_kwargs
 ):
     """Demonstrate forward process on images already noised
 
@@ -31,6 +32,7 @@ def plot_forward_process(
     fig, axs = plt.subplots(
         figsize=(10, 10), nrows=num_rows, ncols=num_cols, squeeze=False
     )
+    plt.tight_layout()
     for row_idx, row in enumerate(imgs):
         # row = [image] + row if with_orig else row
         for col_idx, img in enumerate(row):
@@ -45,10 +47,9 @@ def plot_forward_process(
         for row_idx in range(num_rows):
             axs[row_idx, 0].set(ylabel=row_title[row_idx])
 
-    plt.tight_layout()
     save_file = os.path.join(
         logdir,
-        "forward_process.png",
+        file_name,
     )
     plt.savefig(save_file, bbox_inches="tight")
 
