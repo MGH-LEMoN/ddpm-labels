@@ -3,6 +3,7 @@ import pathlib
 import numpy as np
 import torch
 import torch.nn.functional as F
+from utils import group_labels
 from yael_funcs import image_to_logit
 
 from ext.lab2im.utils import load_volume
@@ -26,14 +27,16 @@ class DDPMLabelsIterableDataset(torch.utils.data.IterableDataset):
 
 # Dataset class for use with list(pathlib.Path). This is really slow
 class DDPMLabelsDataset(torch.utils.data.Dataset):
-    def __init__(self, files, jei_flag=False):
+    def __init__(self, config, files):
         self.files = files
         self.n_files = len(self.files)
-        self.jei_flag = jei_flag
+        self.config = config
 
     def __getitem__(self, index):
         vol = load_volume(self.files[index])
-        return image_to_logit(vol, self.jei_flag)
+        if self.config.group_labels:
+            vol = np.vectorize(group_labels().get)(vol)
+        return image_to_logit(self.config, vol)
 
     def __len__(self):
         return self.n_files

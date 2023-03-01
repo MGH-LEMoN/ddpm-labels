@@ -32,12 +32,22 @@ class Configuration:
         self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.jei_flag = True
+        self.group_labels = True  # see group_labels() in utils.py for more info
+
+        self.save_checkpoint = True
         self.beta_schedule = "linear"
         # "cosine" | "linear" | "quadratic" | "sigmoid"
 
-        if self.jei_flag:
+        if self.jei_flag and self.group_labels:
+            self.image_channels = 4
+
+        if self.jei_flag and not self.group_labels:
             self.image_channels = 24
-        else:
+
+        if not self.jei_flag and self.group_labels:
+            self.image_channels = 3
+
+        if not self.jei_flag and not self.group_labels:
             self.image_channels = 23
 
         self.learning_rate = 1e-5

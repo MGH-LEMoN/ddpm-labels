@@ -230,6 +230,8 @@ def group_labels():
     for (a, b) in zip(old_labels, new_labels):
         my_dict.update(dict.fromkeys(a, b))
 
+    return my_dict
+
 
 if __name__ == "__main__":
     # site_list = list_unique_sites()

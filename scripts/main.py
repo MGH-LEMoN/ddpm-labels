@@ -18,13 +18,8 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader
 from training import auto_train, train
 from utils import load_labelmap_names
-from yael_funcs import (
-    color_map_for_data,
-    logit_to_image,
-    prob_to_rgb,
-    softmax_jei,
-    softmax_yael,
-)
+from yael_funcs import (color_map_for_data, logit_to_image, prob_to_rgb,
+                        softmax_jei, softmax_yael)
 
 
 @torch.no_grad()
@@ -35,9 +30,7 @@ def sample_timestep(model, x, t, closed_form_results):
     Applies noise to this image, if we are not in the last step yet.
     """
     betas = closed_form_results["betas"]
-    sqrt_one_minus_alphas_cumprod = closed_form_results[
-        "sqrt_one_minus_alphas_cumprod"
-    ]
+    sqrt_one_minus_alphas_cumprod = closed_form_results["sqrt_one_minus_alphas_cumprod"]
     sqrt_recip_alphas = closed_form_results["sqrt_recip_alphas"]
     posterior_variance = closed_form_results["posterior_variance"]
 
@@ -57,9 +50,7 @@ def sample_timestep(model, x, t, closed_form_results):
     if t == 0:
         return model_mean
     else:
-        posterior_variance_t = get_index_from_list(
-            posterior_variance, t, x.shape
-        )
+        posterior_variance_t = get_index_from_list(posterior_variance, t, x.shape)
         noise = torch.randn_like(x)
         # Algorithm 2 line 4:
         return model_mean + torch.sqrt(posterior_variance_t) * noise
@@ -141,13 +132,11 @@ if __name__ == "__main__":
     torch.cuda.manual_seed_all(seed)
 
     training_set = DDPMLabelsDataset(
-        load_labelmap_names("ddpm_files_padded.txt")[:512],
-        jei_flag=config.jei_flag,
+        config,
+        load_labelmap_names("ddpm_files_padded.txt"),
     )
 
-    show_images(
-        config, training_set, num_samples=15, cols=5, jei_flag=config.jei_flag
-    )
+    show_images(config, training_set, num_samples=15, cols=5, jei_flag=config.jei_flag)
 
     # closed form results
     cf_results = closed_form_equations(config)
@@ -159,9 +148,7 @@ if __name__ == "__main__":
     plot_forward_process(
         config,
         [
-            get_noisy_image(
-                image, torch.tensor([t]), cf_results, config.jei_flag
-            )
+            get_noisy_image(image, torch.tensor([t]), cf_results, config.jei_flag)
             for t in list(np.arange(0, config.T, 100)) + [config.T - 1]
         ],
     )

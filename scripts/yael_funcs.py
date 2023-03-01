@@ -14,7 +14,7 @@ from ext.mindboggle.labels import extract_numbers_names_colors
 
 
 def softmax_jei(logit):
-    """(K-1) logits -> K probabilities"""
+    """K logits -> K probabilities"""
     return logit.softmax(0)
 
 
@@ -117,17 +117,17 @@ def prob_to_rgb(image, implicit=False, colormap=None):
     return cimage.clamp_(0, 1)
 
 
-def image_to_logit(image, jei_flag=False):
+def image_to_logit(args, image):
     resized_vol = torch.Tensor(image.astype(np.uint8))
 
     # one-hot encode the label map and
     # HWC to CHW and add batch dimension
     resized_vol = torch.movedim(
-        F.one_hot(resized_vol.to(torch.int64), num_classes=24),
+        F.one_hot(resized_vol.to(torch.int64), num_classes=args.image_channels),
         -1,
         0,
     )
-    if jei_flag:
+    if args.jei_flag:
         logit = resized_vol * 7 - 3.5
     else:
         logit = 7 * (resized_vol[1:] - resized_vol[0])
