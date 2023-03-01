@@ -26,17 +26,10 @@ class Configuration:
         self.writer = SummaryWriter(self.logdir)
 
         self.EPOCHS = 1000
-        self.BATCH_SIZE = 64
+        self.BATCH_SIZE = 32
         self.T = 500
         self.IMG_SIZE = (192, 224)
         self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-        self.params = {
-            "batch_size": self.BATCH_SIZE,
-            "shuffle": True,
-            "num_workers": 0,
-            "worker_init_fn": np.random.seed(42),
-        }
 
         self.jei_flag = True
         self.beta_schedule = "linear"

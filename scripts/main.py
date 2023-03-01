@@ -12,10 +12,11 @@ import torch
 from beta_schedule import closed_form_equations
 from data_loaders import DDPMLabelsDataset
 from ddpm_config import Configuration
-from losses import forward_diffusion_sample, get_index_from_list, p_losses
+from losses import forward_diffusion_sample, get_index_from_list
 from plotting import plot_forward_process, show_images
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+from training import auto_train, train
 from utils import load_labelmap_names
 from yael_funcs import (
     color_map_for_data,
@@ -24,9 +25,6 @@ from yael_funcs import (
     softmax_jei,
     softmax_yael,
 )
-
-from ddpm_labels.models.model1 import SimpleUnet
-from ddpm_labels.models.model2 import Unet
 
 
 @torch.no_grad()
@@ -143,10 +141,9 @@ if __name__ == "__main__":
     torch.cuda.manual_seed_all(seed)
 
     training_set = DDPMLabelsDataset(
-        load_labelmap_names("ddpm_files_padded.txt"),
+        load_labelmap_names("ddpm_files_padded.txt")[:512],
         jei_flag=config.jei_flag,
     )
-    training_generator = DataLoader(training_set, **config.params)
 
     show_images(
         config, training_set, num_samples=15, cols=5, jei_flag=config.jei_flag
@@ -156,7 +153,7 @@ if __name__ == "__main__":
     cf_results = closed_form_equations(config)
 
     # get an image to simulate forward diffusion
-    image = next(iter(training_generator))[0]
+    image = training_set[0]
 
     # plot forward diffusion
     plot_forward_process(
@@ -169,48 +166,6 @@ if __name__ == "__main__":
         ],
     )
 
-    model = SimpleUnet(config.image_channels)
-    # model = Unet(
-    #     dim=16, channels=config.image_channels, dim_mults=(2, 4, 8, 16, 32, 64)
-    # )
-
-    model.to(config.DEVICE)
-    optimizer = Adam(model.parameters(), lr=config.learning_rate)
-
-    for epoch in range(1, config.EPOCHS + 1):
-        epoch_loss = 0
-        for step, batch in enumerate(training_generator):
-            optimizer.zero_grad()
-
-            batch_size = batch.shape[0]
-            batch = batch.to(config.DEVICE)
-
-            t = torch.randint(
-                0, config.T, (batch_size,), device=config.DEVICE
-            ).long()
-            loss = p_losses(
-                model, batch, t, cf_results, loss_type=config.loss_type
-            )
-            epoch_loss += loss.item() * batch_size
-
-            loss.backward()
-            optimizer.step()
-
-        # writing loss value to writer object
-        print(
-            f"Epoch {epoch:03d} | Loss: {epoch_loss/training_set.n_files:0.5f}"
-        )
-
-        with config.writer as fn:
-            fn.add_scalar(
-                "training_loss", epoch_loss / len(training_set), epoch
-            )
-
-        # Saving model every 25 epochs
-        if epoch == 1 or epoch % 25 == 0:
-            torch.save(
-                model.state_dict(),
-                os.path.join(config.logdir, f"model_{epoch:04d}"),
-            )
+    auto_train(config, training_set, cf_results)
 
     # sample_plot_image(config.device, epoch)
