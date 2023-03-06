@@ -1,4 +1,3 @@
-import beta_schedule
 import torch
 import torch.nn.functional as F
 
@@ -20,7 +19,6 @@ def forward_diffusion_sample(x_0, t, closed_form_results, noise=None, device="cp
     """
     sqrt_alphas_cumprod = closed_form_results["sqrt_alphas_cumprod"]
     sqrt_one_minus_alphas_cumprod = closed_form_results["sqrt_one_minus_alphas_cumprod"]
-
     if noise is None:
         noise = torch.randn_like(x_0, dtype=torch.float32)
 

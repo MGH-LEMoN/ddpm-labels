@@ -13,9 +13,9 @@ class Configuration:
     This configuration object is a collection of all variables relevant to the analysis
     """
 
-    def __init__(self):
+    def __init__(self, args):
         now = datetime.now()
-        dir_flag = now.strftime("%Y%m%d")  # -%H%M%S
+        dir_flag = now.strftime("%Y%m%d") + "-" + args.results_dir  # -%H%M%S
         self.logdir = os.path.join(
             "/space/calico/1/users/Harsha/ddpm-labels/logs", dir_flag
         )
@@ -24,19 +24,20 @@ class Configuration:
             os.makedirs(self.logdir)
         self.writer = SummaryWriter(self.logdir)
 
-        self.EPOCHS = 1000
-        self.BATCH_SIZE = 32
-        self.T = 1000
+        self.EPOCHS = args.epochs
+        self.BATCH_SIZE = 256
+        self.T = args.time_steps
         self.IMG_SIZE = (192, 224)
         self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.jei_flag = True
-        self.group_labels = True  # see group_labels() in utils.py
-        self.save_images = True
-
-        self.save_checkpoint = True
-        self.beta_schedule = "linear"
+        self.model_idx = args.model_idx
+        self.jei_flag = args.jei_flag
+        self.group_labels = args.group_labels  # see group_labels() in utils.py
+        self.beta_schedule = args.beta_schedule
         # "cosine" | "linear" | "quadratic" | "sigmoid"
+
+        self.save_images = True
+        self.save_checkpoint = True
 
         if self.jei_flag and self.group_labels:
             self.image_channels = 4
@@ -50,7 +51,7 @@ class Configuration:
         if not self.jei_flag and not self.group_labels:
             self.image_channels = 23
 
-        self.learning_rate = 1e-5
+        self.learning_rate = args.learning_rate
         self.loss_type = "l2"
         # "l1" | "l2" | "huber"
 

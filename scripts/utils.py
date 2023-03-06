@@ -12,8 +12,11 @@ import numpy as np
 from tqdm import tqdm
 
 from ext.lab2im import edit_volumes
-from ext.lab2im.utils import (find_closest_number_divisible_by_m, load_volume,
-                              save_volume)
+from ext.lab2im.utils import (
+    find_closest_number_divisible_by_m,
+    load_volume,
+    save_volume,
+)
 
 PRJCT_DIR = "/space/calico/1/users/Harsha/ddpm-labels"
 DATA_DIR = os.path.join(PRJCT_DIR, "data")

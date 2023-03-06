@@ -2,7 +2,6 @@ import pathlib
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from utils import group_labels
 from yael_funcs import image_to_logit
 

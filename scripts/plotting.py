@@ -2,16 +2,19 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-from yael_funcs import (color_map_for_data, prob_to_rgb, softmax_jei,
-                        softmax_yael)
+from yael_funcs import (
+    color_map_for_data,
+    prob_to_rgb,
+    softmax_jei,
+    softmax_yael,
+)
 
 
 # source: https://pytorch.org/vision/stable/auto_examples/plot_transforms.html#sphx-glr-auto-examples-plot-transforms-py
-def plot_forward_process(
+def plot_diffusion_process(
     config, imgs, file_name, with_orig=False, row_title=None, **imshow_kwargs
 ):
-    """Demonstrate forward process on images already noised
+    """Demonstrate forward/reverse process on
 
     Args:
         imgs (_type_): _description_
@@ -22,6 +25,11 @@ def plot_forward_process(
         logdir = "logs"
     else:
         logdir = config.logdir
+
+    if "reverse" in file_name:
+        time_steps = config.plot_time_steps[::-1]
+    else:
+        time_steps = config.plot_time_steps
 
     if not isinstance(imgs[0], list):
         # Make a 2d grid even if there's just 1 row
@@ -39,6 +47,8 @@ def plot_forward_process(
             ax = axs[row_idx, col_idx]
             ax.imshow(np.asarray(img), **imshow_kwargs)
             ax.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
+            ax.set(title=rf"{str(time_steps[col_idx])}")
+            ax.title.set_size(10)
 
     if with_orig:
         axs[0, 0].set(title="Original image")
@@ -47,6 +57,7 @@ def plot_forward_process(
         for row_idx in range(num_rows):
             axs[row_idx, 0].set(ylabel=row_title[row_idx])
 
+    plt.subplots_adjust(wspace=0.025)
     save_file = os.path.join(
         logdir,
         file_name,

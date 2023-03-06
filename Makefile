@@ -16,11 +16,32 @@ list:
 
 # Generic Variables
 USR := $(shell whoami | head -c 2)
-DT := $(shell date +"%Y%m%d-%H%M%S")
+DT := $(shell date +"%Y%m%d")
+# -%H%M%S
 
 # ddpm-train: training a model from scratch
+# Training parameters
+model_idx = 1
+time_steps = 800
+beta_schedule = 'linear'
+epochs = 1000
+jei_flag = 1
+group_labels = 1
+learning_rate = 5e-5
+results_dir = M$(model_idx)T$(time_steps)$(beta_schedule)G$(group_labels)J$(jei_flag)
+
 ddpm-train:
-	sbatch --job-name=$(DT) submit.sh python scripts/ddpm-main.py
+	sbatch --job-name=$(DT)-$(results_dir) submit.sh \
+		python -u scripts/main.py \
+			--model_idx $(model_idx) \
+			--time_steps $(time_steps) \
+			--beta_schedule $(beta_schedule) \
+			--results_dir $(results_dir) \
+			--epochs $(epochs) \
+			--jei_flag $(jei_flag) \
+			--group_labels $(group_labels) \
+			--learning_rate $(learning_rate) \
+			;
 
 # ddpm-resume: resume training
 ddpm-resume:

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from accelerate import Accelerator, find_executable_batch_size
 from losses import p_losses, reverse_diffusion_sample
-from plotting import plot_forward_process
+from plotting import plot_diffusion_process
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from yael_funcs import logit_to_image
@@ -48,11 +48,24 @@ def get_denoised_image(config, model, x_noise, t, cf_results):
     return denoised_image
 
 
+def select_model(config):
+    if config.model_idx == 1:
+        model = SimpleUnet(config.image_channels)
+    elif config.model_idx == 2:
+        model = Unet(
+            dim=16,
+            channels=config.image_channels,
+            dim_mults=(2, 4, 8, 16, 32, 64),
+        )
+    else:
+        print("Invalid Model ID")
+        exit()
+    return model
+
+
 def train(config, training_set, cf_results):
-    model = SimpleUnet(config.image_channels)
-    # model = Unet(
-    #     dim=16, channels=config.image_channels, dim_mults=(2, 4, 8, 16, 32, 64)
-    # )
+
+    model = select_model(config)
 
     model.to(config.DEVICE)
     optimizer = Adam(model.parameters(), lr=config.learning_rate)
@@ -60,8 +73,8 @@ def train(config, training_set, cf_results):
     params = {
         "batch_size": config.BATCH_SIZE,
         "shuffle": True,
-        "num_workers": 0,
-        "worker_init_fn": np.random.seed(42),
+        # "num_workers": 0,
+        # "worker_init_fn": np.random.seed(42),
     }
 
     training_generator = DataLoader(training_set, **params)
@@ -101,7 +114,7 @@ def train(config, training_set, cf_results):
                     (1, config.image_channels, *config.IMG_SIZE),
                     device=config.DEVICE,
                 )
-                plot_forward_process(
+                plot_diffusion_process(
                     config,
                     [
                         get_denoised_image(
