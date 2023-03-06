@@ -1,11 +1,11 @@
 import json
 import os
-from collections import namedtuple
 from datetime import datetime
 
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
+from ext.numpyencoder import NumpyEncoder
 
 
 class Configuration:
@@ -56,6 +56,8 @@ class Configuration:
 
         self.plot_time_steps = list(np.arange(0, self.T, 100)) + [self.T - 1]
 
+        self._write_config()
+
     def _write_config(self, file_name=None):
         """Write configuration to a file
         Args:
@@ -64,7 +66,14 @@ class Configuration:
         file_name = "config.json" if file_name is None else file_name
 
         dictionary = self.__dict__
-        json_object = json.dumps(dictionary, sort_keys=True, indent=4)
+        json_object = json.dumps(
+            dictionary,
+            sort_keys=True,
+            indent=4,
+            separators=(", ", ": "),
+            ensure_ascii=False,
+            cls=NumpyEncoder,
+        )
 
         config_file = os.path.join(dictionary["logdir"], file_name)
 
