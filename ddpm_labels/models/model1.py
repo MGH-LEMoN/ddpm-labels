@@ -48,7 +48,9 @@ class SinusoidalPositionEmbeddings(nn.Module):
         device = time.device
         half_dim = self.dim // 2
         embeddings = math.log(10000) / (half_dim - 1)
-        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
+        embeddings = torch.exp(
+            torch.arange(half_dim, device=device) * -embeddings
+        )
         embeddings = time[:, None] * embeddings[None, :]
         embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
         # TODO: Double check the ordering here
@@ -114,13 +116,17 @@ class SimpleUnet(nn.Module):
 
 
 if __name__ == "__main__":
-    device = "cuda" if torch.cuda.is_available() else "cpu"  # PyTorch v0.4.0
-    image_channels = 24
-    model = SimpleUnet(image_channels=image_channels).to(device)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    image_channels = 24  # 1
+    image_size = (192, 224)  # (28, 28)
     batch_size = 1
+
+    # Note: For (28, 28), remove 2 up/down channels.
+
+    model = SimpleUnet(image_channels=image_channels).to(device)
     summary(
         model,
-        input_size=[(batch_size, image_channels, 192, 224), (batch_size,)],
+        input_size=[(batch_size, image_channels, *image_size), (batch_size,)],
         col_names=["input_size", "output_size", "num_params"],
         depth=5,
     )
