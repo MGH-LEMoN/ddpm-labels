@@ -1,11 +1,12 @@
+import ast
 import json
 import os
 from datetime import datetime
 
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
 from ext.numpyencoder import NumpyEncoder
+from torch.utils.tensorboard import SummaryWriter
 
 
 class Configuration:
@@ -15,9 +16,9 @@ class Configuration:
 
     def __init__(self, args):
         now = datetime.now()
-        dir_flag = now.strftime("%Y%m%d") + "-" + args.results_dir  # -%H%M%S
+        self.dir_flag = now.strftime("%Y%m%d") + "-" + args.results_dir  # -%H%M%S
         self.logdir = os.path.join(
-            "/space/calico/1/users/Harsha/ddpm-labels/logs", dir_flag
+            "/space/calico/1/users/Harsha/ddpm-labels/logs", self.dir_flag
         )
 
         if not os.path.isdir(self.logdir):
@@ -25,9 +26,9 @@ class Configuration:
         self.writer = SummaryWriter(self.logdir)
 
         self.EPOCHS = args.epochs
-        self.BATCH_SIZE = 256
+        self.BATCH_SIZE = 128
         self.T = args.time_steps
-        self.IMG_SIZE = (192, 224)
+        self.IMG_SIZE = args.image_size
         self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
         self.model_idx = args.model_idx
@@ -52,12 +53,16 @@ class Configuration:
             self.image_channels = 23
 
         self.learning_rate = args.learning_rate
-        self.loss_type = "l2"
+        self.loss_type = args.loss_type
         # "l1" | "l2" | "huber"
 
         self.plot_time_steps = list(np.arange(0, self.T, 100)) + [self.T - 1]
 
         self._write_config()
+
+        self.DEBUG = False
+        if self.DEBUG:
+            self.image_channels = 1
 
     def _write_config(self, file_name=None):
         """Write configuration to a file

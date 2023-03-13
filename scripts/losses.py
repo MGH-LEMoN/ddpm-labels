@@ -76,6 +76,7 @@ def reverse_diffusion_sample(model, x, t, closed_form_results):
         sqrt_one_minus_alphas_cumprod, t, x.shape
     )
     sqrt_recip_alphas_t = get_index_from_list(sqrt_recip_alphas, t, x.shape)
+    posterior_variance_t = get_index_from_list(posterior_variance, t, x.shape)
 
     # Call model (current image - noise prediction)
     # Equation 11 in the paper
@@ -87,7 +88,38 @@ def reverse_diffusion_sample(model, x, t, closed_form_results):
     if t == 0:
         return model_mean
     else:
-        posterior_variance_t = get_index_from_list(posterior_variance, t, x.shape)
         noise = torch.randn_like(x)
         # Algorithm 2 line 4:
         return model_mean + torch.sqrt(posterior_variance_t) * noise
+
+
+# Algorithm 2 (including returning all images)
+@torch.no_grad()
+def p_sample_loop(config, model, shape, cf_calculations):
+    device = next(model.parameters()).device
+
+    b = shape[0]
+    # start from pure noise (for each example in the batch)
+    img = torch.randn(shape, device=device)
+    imgs = []
+
+    for i in reversed(range(0, config.T)):
+        img = reverse_diffusion_sample(
+            model,
+            img,
+            torch.full((b,), i, device=device, dtype=torch.long),
+            i,
+            cf_calculations,
+        )
+        imgs.append(img.cpu().numpy())
+    return imgs
+
+
+@torch.no_grad()
+def sample(config, model, image_size, cf_calculations, batch_size=16, channels=3):
+    return p_sample_loop(
+        config,
+        model,
+        shape=(batch_size, channels, *image_size),
+        cf_calculations=cf_calculations,
+    )

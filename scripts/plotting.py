@@ -2,6 +2,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from yael_funcs import (
     color_map_for_data,
     prob_to_rgb,
@@ -45,7 +46,10 @@ def plot_diffusion_process(
         # row = [image] + row if with_orig else row
         for col_idx, img in enumerate(row):
             ax = axs[row_idx, col_idx]
-            ax.imshow(np.asarray(img), **imshow_kwargs)
+            if config.DEBUG:
+                ax.imshow(np.asarray(img[0]), cmap="gray", **imshow_kwargs)
+            else:
+                ax.imshow(np.asarray(img), **imshow_kwargs)
             ax.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             ax.set(title=rf"{str(time_steps[col_idx])}")
             ax.title.set_size(10)
@@ -66,7 +70,7 @@ def plot_diffusion_process(
 
 
 # display a few images to check the label maps
-def show_images(config, data, num_samples=20, cols=4, jei_flag=False):
+def show_images(config, data, num_samples=20, cols=4):
     """Plots some samples from the dataset"""
     fig = plt.figure(figsize=(10, 10))
     plt.tight_layout()
@@ -75,13 +79,16 @@ def show_images(config, data, num_samples=20, cols=4, jei_flag=False):
             break
         plt.subplot(num_samples // cols + 3, cols, i + 1)
 
-        if jei_flag:
-            img = softmax_jei(img)
+        if config.DEBUG:
+            plt.imshow(img[0], interpolation="nearest", cmap="gray")
         else:
-            img = softmax_yael(img)
+            if config.jei_flag:
+                img = softmax_jei(img)
+            else:
+                img = softmax_yael(img)
 
-        img = prob_to_rgb(img, implicit=True, colormap=color_map_for_data())
-        plt.imshow(img, interpolation="nearest")
+            img = prob_to_rgb(img, implicit=True, colormap=color_map_for_data())
+            plt.imshow(img, interpolation="nearest")
 
         plt.xticks([])
         plt.yticks([])

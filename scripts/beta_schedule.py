@@ -34,7 +34,6 @@ def sigmoid_beta_schedule(timesteps):
 
 
 def closed_form_equations(config):
-
     if isinstance(config, str):
         beta_schedule = config
         timesteps = 500
