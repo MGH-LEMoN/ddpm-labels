@@ -21,7 +21,7 @@ from yael_funcs import logit_to_image
 def auto_train(args, dataset, closed_form_calculations):
     accelerator = Accelerator()
 
-    @find_executable_batch_size(starting_batch_size=4096 * 4)
+    @find_executable_batch_size(starting_batch_size=256)
     def inner_training_loop(batch_size=128):
         nonlocal accelerator  # Ensure they can be used in our context
         accelerator.free_memory()  # Free all lingering references
@@ -66,6 +66,9 @@ def train(config, training_set, cf_results):
     model.to(config.DEVICE)
     optimizer = Adam(model.parameters(), lr=config.learning_rate)
 
+    if config.checkpoint:
+        model.load_state_dict(torch.load(config.checkpoint))
+
     params = {
         "batch_size": config.BATCH_SIZE,
         "shuffle": True,
@@ -75,7 +78,7 @@ def train(config, training_set, cf_results):
 
     training_generator = DataLoader(training_set, **params)
 
-    for epoch in range(1, config.EPOCHS + 1):
+    for epoch in range(config.start_epoch + 1, config.EPOCHS + 1):
         epoch_loss = 0
         for batch in training_generator:
             optimizer.zero_grad()
@@ -101,7 +104,7 @@ def train(config, training_set, cf_results):
 
         # Saving model every 25 epochs
         if config.save_checkpoint:
-            if epoch == 1 or epoch % 25 == 0:
+            if epoch == 1 or epoch % 5 == 0:
                 torch.save(
                     model.state_dict(),
                     os.path.join(config.logdir, f"model_{epoch:04d}"),
@@ -113,8 +116,8 @@ def train(config, training_set, cf_results):
                 samples = sample(
                     config,
                     model,
-                    image_size=config.image_size,
-                    batch_size=config.batch_size,
+                    image_size=config.IMG_SIZE,
+                    batch_size=config.BATCH_SIZE,
                     channels=config.image_channels,
                     cf_calculations=cf_results,
                 )

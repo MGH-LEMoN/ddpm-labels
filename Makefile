@@ -24,15 +24,17 @@ DT := $(shell date +"%Y%m%d")
 model_idx = 1
 time_steps = 800
 beta_schedule = 'linear'
-epochs = 1000
+epochs = 50
 jei_flag = 1
 group_labels = 1
 learning_rate = 5e-5
+image_size = (192, 224)
 results_dir = M$(model_idx)T$(time_steps)$(beta_schedule)G$(group_labels)J$(jei_flag)
+results_dir = test
 
 ddpm-train:
-	sbatch --job-name=$(DT)-$(results_dir) submit.sh \
-		python -u scripts/main.py \
+	# sbatch --job-name=$(DT)-$(results_dir) submit.sh \
+		python -u scripts/main.py train \
 			--model_idx $(model_idx) \
 			--time_steps $(time_steps) \
 			--beta_schedule $(beta_schedule) \
@@ -41,12 +43,29 @@ ddpm-train:
 			--jei_flag $(jei_flag) \
 			--group_labels $(group_labels) \
 			--learning_rate $(learning_rate) \
+			--image_size '$(image_size)' \
 			;
 
 # ddpm-resume: resume training
 ddpm-resume:
-# TODO:
+	# sbatch --job-name=$(DT)-$(results_dir) submit.sh \
+		python -u scripts/main.py resume-train \
+			/space/calico/1/users/Harsha/ddpm-labels/logs/20230313-test \
+			;
 
 # ddpm-sample: generate samples from a trained model
 ddpm-sample:
 # TODO:
+
+# ddpm-test: change self.DEBUG to TRUE in ddpm_config.py
+# please refer to ddpm-labels/models/model1.py and model2.py for more info
+# on how to modify the model parameters to work with fashion mnist data
+ddpm-test:
+	python -u scripts/main.py train \
+		--model_idx 1 \
+		--time_steps 300 \
+		--beta_schedule linear \
+		--results_dir mnist \
+		--epochs 10 \
+		--image_size '(28, 28)' \
+		;
