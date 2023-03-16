@@ -1,5 +1,6 @@
 import glob
 import os
+import random
 from warnings import warn
 
 import matplotlib.colors as mcolors
@@ -141,10 +142,10 @@ def logit_to_image(config, img):
 
 def plot_sample_label_map():
     # take a sample file and plot it
-    files = sorted(
+    file = random.choice(
         glob.glob(os.path.join(my_utils.DATA_DIR, "test-maps-padded", "*.mgz"))
     )
-    curr_vol = utils.load_volume(files[0])
+    curr_vol = utils.load_volume(file)
     plt.imshow(curr_vol, cmap=color_map_for_data(), interpolation="nearest")
     plt.show()
 
