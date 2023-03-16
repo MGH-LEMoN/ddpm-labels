@@ -123,7 +123,7 @@ def image_to_logit(args, image):
     # one-hot encode the label map and
     # HWC to CHW and add batch dimension
     resized_vol = torch.movedim(
-        F.one_hot(resized_vol.to(torch.int64), num_classes=args.image_channels),
+        F.one_hot(resized_vol.to(torch.int64), num_classes=args.im_channels),
         -1,
         0,
     )

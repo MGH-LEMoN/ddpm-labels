@@ -39,7 +39,7 @@ def closed_form_equations(config):
         timesteps = 500
     else:
         beta_schedule = config.beta_schedule
-        timesteps = config.T
+        timesteps = config.time_steps
 
     match beta_schedule:
         case "linear":
