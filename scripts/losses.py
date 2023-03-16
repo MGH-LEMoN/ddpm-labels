@@ -116,10 +116,10 @@ def p_sample_loop(config, model, shape, cf_calculations):
 
 
 @torch.no_grad()
-def sample(config, model, image_size, cf_calculations, batch_size=16, channels=3):
+def sample(config, model, cf_calculations):
     return p_sample_loop(
         config,
         model,
-        shape=(batch_size, channels, *image_size),
+        shape=(config.sampling_batch_size, config.channels, *config.im_size),
         cf_calculations=cf_calculations,
     )

@@ -24,33 +24,35 @@ DT := $(shell date +"%Y%m%d")
 model_idx = 1
 time_steps = 800
 beta_schedule = 'linear'
-epochs = 50
+epochs = 20
 jei_flag = 1
 group_labels = 1
-learning_rate = 5e-5
-image_size = (192, 224)
-results_dir = M$(model_idx)T$(time_steps)$(beta_schedule)G$(group_labels)J$(jei_flag)
-results_dir = test
+lr = 5e-5
+im_size = (192, 224)
+logdir = M$(model_idx)T$(time_steps)$(beta_schedule)G$(group_labels)J$(jei_flag)
+logdir = test1
 
+# ddpm-resume: train a model from scratch
 ddpm-train:
 	# sbatch --job-name=$(DT)-$(results_dir) submit.sh \
 		python -u scripts/main.py train \
 			--model_idx $(model_idx) \
 			--time_steps $(time_steps) \
 			--beta_schedule $(beta_schedule) \
-			--results_dir $(results_dir) \
+			--logdir $(logdir) \
 			--epochs $(epochs) \
 			--jei_flag $(jei_flag) \
 			--group_labels $(group_labels) \
-			--learning_rate $(learning_rate) \
-			--image_size '$(image_size)' \
+			--lr $(lr) \
+			--im_size '$(im_size)' \
 			;
 
 # ddpm-resume: resume training
 ddpm-resume:
 	# sbatch --job-name=$(DT)-$(results_dir) submit.sh \
 		python -u scripts/main.py resume-train \
-			/space/calico/1/users/Harsha/ddpm-labels/logs/20230313-test \
+			/space/calico/1/users/Harsha/ddpm-labels/logs/mnist \
+			--debug \
 			;
 
 # ddpm-sample: generate samples from a trained model
@@ -65,7 +67,8 @@ ddpm-test:
 		--model_idx 1 \
 		--time_steps 300 \
 		--beta_schedule linear \
-		--results_dir mnist \
-		--epochs 10 \
-		--image_size '(28, 28)' \
+		--logdir mnist \
+		--epochs 25 \
+		--im_size '(28, 28)' \
+		--debug \
 		;

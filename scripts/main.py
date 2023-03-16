@@ -36,42 +36,34 @@ def parse_cmdline_arguments():
         "resume-train", help="Use this sub-command for resuming training"
     )
     parser_resume.add_argument(
-        "results_dir",
+        "logdir",
         type=str,
         help="""Folder containing previous checkpoints""",
     )
+    parser_resume.add_argument("--debug", action="store_true", dest="debug")
 
     # create the parser for the "train" command
     parser_train = subparsers.add_parser(
         "train", help="Use this sub-command for training"
     )
 
-    parser_train.add_argument(
-        "--model_idx", type=int, dest="model_idx", default=1
-    )
-    parser_train.add_argument("--epochs", type=int, dest="EPOCHS", default=1000)
-    parser_train.add_argument("--time_steps", type=int, dest="T", default=500)
+    parser_train.add_argument("--debug", action="store_true", dest="debug")
+    parser_train.add_argument("--model_idx", type=int, dest="model_idx", default=1)
+    parser_train.add_argument("--epochs", type=int, dest="epochs", default=500)
+    parser_train.add_argument("--time_steps", type=int, dest="time_steps", default=500)
     parser_train.add_argument(
         "--beta_schedule", type=str, dest="beta_schedule", default="linear"
     )
-    parser_train.add_argument(
-        "--results_dir", type=str, dest="results_dir", default="test"
-    )
-    parser_train.add_argument(
-        "--jei_flag", type=int, dest="jei_flag", default=0
-    )
+    parser_train.add_argument("--logdir", type=str, dest="logdir", default="test")
+    parser_train.add_argument("--jei_flag", type=int, dest="jei_flag", default=0)
     parser_train.add_argument(
         "--group_labels", type=int, dest="group_labels", default=0
     )
+    parser_train.add_argument("--lr", type=float, dest="lr", default=5e-5)
     parser_train.add_argument(
-        "--learning_rate", type=float, dest="learning_rate", default=5e-5
+        "--im_size", nargs="?", type=infer, dest="im_size", default=None
     )
-    parser_train.add_argument(
-        "--image_size", nargs="?", type=infer, dest="IMG_SIZE", default=None
-    )
-    parser_train.add_argument(
-        "--image_channels", type=int, dest="image_channels", default=1
-    )
+    parser_train.add_argument("--im_channels", type=int, dest="im_channels", default=1)
     parser_train.add_argument(
         "--loss_type", type=str, dest="loss_type", default="huber"
     )
@@ -80,55 +72,56 @@ def parse_cmdline_arguments():
     gettrace = getattr(sys, "gettrace", None)
 
     if gettrace():
-        # sys.argv = [
-        #     "main.py",
-        #     "train",
-        #     "--learning_rate",
-        #     "1e-3",
-        #     "--time_steps",
-        #     "750",
-        #     "--jei_flag",
-        #     "1",
-        #     "--group_labels",
-        #     "1",
-        #     "--results_dir",
-        #     "test",
-        #     "--image_size",
-        #     "(192, 224)",
-        #     "--epochs",
-        #     "10",
-        #     "--beta_schedule",
-        #     "linear",
-        # ]
+        sys.argv = [
+            "main.py",
+            "train",
+            "--lr",
+            "1e-4",
+            "--time_steps",
+            "800",
+            "--jei_flag",
+            "1",
+            "--group_labels",
+            "1",
+            "--logdir",
+            "test1",
+            "--im_size",
+            "(192, 224)",
+            "--epochs",
+            "10",
+            "--beta_schedule",
+            "linear",
+        ]
 
         # sys.argv = [
         #     "main.py",
         #     "resume-train",
         #     "/space/calico/1/users/Harsha/ddpm-labels/logs/20230313-test",
+        #     "--debug",
         # ]
 
-        sys.argv = [
-            "main.py",
-            "train",
-            "--model_idx",
-            "1",
-            "--time_steps",
-            "300",
-            "--beta_schedule",
-            "linear",
-            "--results_dir",
-            "mnist",
-            "--epochs",
-            "10",
-            "--image_size",
-            "(28, 28)",
-        ]
+        # sys.argv = [
+        #     "main.py",
+        #     "train",
+        #     "--model_idx",
+        #     "1",
+        #     "--time_steps",
+        #     "300",
+        #     "--beta_schedule",
+        #     "linear",
+        #     "--results_dir",
+        #     "mnist",
+        #     "--epochs",
+        #     "10",
+        #     "--image_size",
+        #     "(28, 28)",
+        # ]
 
     args = parser.parse_args()
 
     if sys.argv[1] == "train":
         try:
-            args.IMG_SIZE = ast.literal_eval(args.IMG_SIZE)
+            args.im_size = ast.literal_eval(args.im_size)
         except ValueError:
             pass
 
@@ -136,7 +129,7 @@ def parse_cmdline_arguments():
         train_main(config)
 
     elif sys.argv[1] == "resume-train":
-        chkpt_folder = args.results_dir
+        chkpt_folder = args.logdir
 
         config_file = os.path.join(chkpt_folder, "config.json")
         assert os.path.exists(config_file), "Configuration file not found"
@@ -146,16 +139,11 @@ def parse_cmdline_arguments():
 
         assert isinstance(data, dict), "Invalid Object Type"
 
-        data.pop("message", "Key Error")
-
         dice_list = sorted(glob.glob(os.path.join(chkpt_folder, "model*")))
 
         if dice_list:
             data["checkpoint"] = dice_list[-1]
-            data["start_epoch"] = int(
-                os.path.basename(dice_list[-1]).split("_")[-1]
-            )
-            data["results_dir"] = os.path.basename(chkpt_folder)
+            data["start_epoch"] = int(os.path.basename(dice_list[-1]).split("_")[-1])
         else:
             sys.exit("No checkpoints exist to resume training")
 
@@ -163,7 +151,6 @@ def parse_cmdline_arguments():
         config = Configuration(args, "config_resume.json")
 
         train_main(config, True)
-
     else:
         raise Exception("Invalid Sub-command")
 
@@ -190,7 +177,7 @@ def get_noisy_image(config, x_start, t, cf_results):
     x_noisy, _ = forward_diffusion_sample(x_start, t, cf_results)
 
     # turn back into RGB image
-    if config.DEBUG:
+    if config.debug:
         noisy_image = x_noisy
     else:
         noisy_image = logit_to_image(config, x_noisy)
@@ -199,7 +186,7 @@ def get_noisy_image(config, x_start, t, cf_results):
 
 
 def train_main(config, resume_flag=False):
-    if config.DEBUG:
+    if config.debug:
         from datasets import load_dataset
         from torchvision import transforms
         from torchvision.transforms import Compose
@@ -221,9 +208,7 @@ def train_main(config, resume_flag=False):
             del examples["image"]
             return examples
 
-        transformed_set = dataset.with_transform(transforms).remove_columns(
-            "label"
-        )
+        transformed_set = dataset.with_transform(transforms).remove_columns("label")
         training_set = transformed_set["train"][:]["pixel_values"]
     else:
         training_set = DDPMLabelsDataset(

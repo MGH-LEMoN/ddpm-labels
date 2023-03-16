@@ -46,7 +46,7 @@ def plot_diffusion_process(
         # row = [image] + row if with_orig else row
         for col_idx, img in enumerate(row):
             ax = axs[row_idx, col_idx]
-            if config.DEBUG:
+            if config.debug:
                 ax.imshow(np.asarray(img[0]), cmap="gray", **imshow_kwargs)
             else:
                 ax.imshow(np.asarray(img), **imshow_kwargs)
@@ -79,7 +79,7 @@ def show_images(config, data, num_samples=20, cols=4):
             break
         plt.subplot(num_samples // cols + 3, cols, i + 1)
 
-        if config.DEBUG:
+        if config.debug:
             plt.imshow(img[0], interpolation="nearest", cmap="gray")
         else:
             if config.jei_flag:
