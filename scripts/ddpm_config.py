@@ -7,6 +7,8 @@ import numpy as np
 import torch
 from ext.numpyencoder import NumpyEncoder
 from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
+from ext import utils as ext_utils
 
 
 class Configuration:
@@ -74,6 +76,9 @@ class Configuration:
         self.sampling_batch_size = getattr(args, "sampling_batch_size", 16)
         self.sampling_freq = getattr(args, "sampling_freq", 10)
         self.checkpoint_freq = getattr(args, "checkpoint_freq", 10)
+
+        args.COMMIT_HASH = ext_utils.get_git_revision_short_hash()
+        args.CREATED_ON = f'{datetime.now().strftime("%A %m/%d/%Y %H:%M:%S")}'
 
     def _write_config(self, file_name=None):
         """Write configuration to a file

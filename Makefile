@@ -21,31 +21,39 @@ DT := $(shell date +"%Y%m%d")
 
 # ddpm-train: training a model from scratch
 # Training parameters
-model_idx = 1
+model_idx = 1 2
 time_steps = 800
-beta_schedule = 'linear'
-epochs = 20
+beta_schedule = linear cosine quadratic sigmoid
+loss_type = l1 l2 huber
+epochs = 1000
 jei_flag = 1
-group_labels = 1
+group_labels = 0
 lr = 5e-5
-im_size = (192, 224)
-logdir = M$(model_idx)T$(time_steps)$(beta_schedule)G$(group_labels)J$(jei_flag)
-logdir = test1
+im_size = (96, 112)
 
 # ddpm-resume: train a model from scratch
 ddpm-train:
-	# sbatch --job-name=$(DT)-$(results_dir) submit.sh \
-		python -u scripts/main.py train \
-			--model_idx $(model_idx) \
-			--time_steps $(time_steps) \
-			--beta_schedule $(beta_schedule) \
-			--logdir $(logdir) \
-			--epochs $(epochs) \
-			--jei_flag $(jei_flag) \
-			--group_labels $(group_labels) \
-			--lr $(lr) \
-			--im_size '$(im_size)' \
-			;
+# sbatch --job-name=$$logdir submit.sh 
+	for model in $(model_idx); do \
+		for schedule in $(beta_schedule); do \
+			for loss in $(loss_type); do \
+				logdir=M$$model\T$(time_steps)$$schedule\G$(group_labels)J$(jei_flag)D1
+				sbatch --job-name=$$logdir submit.sh python -u scripts/main.py train \
+					--model_idx $$model \
+					--time_steps $(time_steps) \
+					--beta_schedule $$schedule \
+					--loss_type $$loss \
+					--logdir $$logdir \
+					--epochs $(epochs) \
+					--jei_flag $(jei_flag) \
+					--group_labels $(group_labels) \
+					--lr $(lr) \
+					--im_size '$(im_size)' \
+					--downsample; \
+			done; \
+		done; \
+	done;
+
 
 # ddpm-resume: resume training
 ddpm-resume:
