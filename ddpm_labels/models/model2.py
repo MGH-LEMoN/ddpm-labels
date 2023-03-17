@@ -355,10 +355,10 @@ class Unet(nn.Module):
 
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+
     image_channels = 1  # 24
-    image_size = (28, 28)  # (192, 224)
-    dim_mults = (1, 2, 4)  # (2, 4, 8, 16, 32, 64)
+    image_size = (96, 112)  # (192, 224), (28, 28)
+    dim_mults = (2, 4, 8, 16, 32)  # (2, 4, 8, 16, 32, 64), (1, 2, 4)
     batch_size = 1
 
     model = Unet(dim=16, channels=image_channels, dim_mults=dim_mults).to(

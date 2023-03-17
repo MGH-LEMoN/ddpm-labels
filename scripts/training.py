@@ -52,7 +52,7 @@ def select_model(config):
             model = Unet(
                 dim=16,
                 channels=config.im_channels,
-                dim_mults=(2, 4, 8, 16, 32, 64),
+                dim_mults=(2, 4, 8, 16, 32),
             )
     else:
         print("Invalid Model ID")

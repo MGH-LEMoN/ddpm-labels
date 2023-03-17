@@ -19,6 +19,10 @@ USR := $(shell whoami | head -c 2)
 DT := $(shell date +"%Y%m%d")
 # -%H%M%S
 
+# Notes: \
+Image Size (96, 112) Batch Size for Model 1: 704, Model 2: 192
+
+
 # ddpm-train: training a model from scratch
 # Training parameters
 model_idx = 2
@@ -30,7 +34,7 @@ jei_flag = 1
 group_labels = 0
 lr = 5e-5
 im_size = (96, 112)
-batch_size = 32
+batch_size = 192
 
 # ddpm-resume: train a model from scratch
 ddpm-train:
