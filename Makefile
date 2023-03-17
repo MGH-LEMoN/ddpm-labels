@@ -21,7 +21,7 @@ DT := $(shell date +"%Y%m%d")
 
 # ddpm-train: training a model from scratch
 # Training parameters
-model_idx = 1 2
+model_idx = 2
 time_steps = 800
 beta_schedule = linear cosine quadratic sigmoid
 loss_type = l1 l2 huber
@@ -30,6 +30,7 @@ jei_flag = 1
 group_labels = 0
 lr = 5e-5
 im_size = (96, 112)
+batch_size = 32
 
 # ddpm-resume: train a model from scratch
 ddpm-train:
@@ -45,6 +46,7 @@ ddpm-train:
 					--loss_type $$loss \
 					--logdir $$logdir \
 					--epochs $(epochs) \
+					--batch_size $(batch_size) \
 					--jei_flag $(jei_flag) \
 					--group_labels $(group_labels) \
 					--lr $(lr) \

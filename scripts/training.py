@@ -1,6 +1,6 @@
 import os
 import random
-
+from datetime import datetime
 import numpy as np
 import torch
 from accelerate import Accelerator, find_executable_batch_size
@@ -97,7 +97,9 @@ def train(config, training_set, cf_results):
             optimizer.step()
 
         # writing loss value to writer object
-        print(f"Epoch {epoch:04d} | Loss: {epoch_loss/len(training_set):0.5f}")
+        print(
+            f"{datetime.now().strftime('%Y%m%d-%H:%M:%S')} Epoch {epoch:04d} | Loss: {epoch_loss/len(training_set):0.5f}"
+        )
         config.writer.add_scalar("training_loss", epoch_loss / len(training_set), epoch)
 
         # Saving model every 25 epochs

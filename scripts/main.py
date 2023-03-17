@@ -50,6 +50,7 @@ def parse_cmdline_arguments():
     parser_train.add_argument("--debug", action="store_true", dest="debug")
     parser_train.add_argument("--model_idx", type=int, dest="model_idx", default=1)
     parser_train.add_argument("--epochs", type=int, dest="epochs", default=500)
+    parser_train.add_argument("--batch_size", type=int, dest="batch_size", default=32)
     parser_train.add_argument("--time_steps", type=int, dest="time_steps", default=500)
     parser_train.add_argument(
         "--beta_schedule", type=str, dest="beta_schedule", default="linear"
@@ -92,6 +93,8 @@ def parse_cmdline_arguments():
             "10",
             "--beta_schedule",
             "linear",
+            "--model_idx",
+            "1",
         ]
 
         # sys.argv = [
@@ -236,7 +239,7 @@ def train_main(config, resume_flag=False):
             file_name="forward_process.png",
         )
 
-    auto_train(config, training_set, cf_results)
+    train(config, training_set, cf_results)
 
 
 if __name__ == "__main__":
