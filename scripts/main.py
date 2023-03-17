@@ -67,6 +67,7 @@ def parse_cmdline_arguments():
     parser_train.add_argument(
         "--loss_type", type=str, dest="loss_type", default="huber"
     )
+    parser_train.add_argument("--downsample", action="store_true", dest="downsample")
 
     # If running the code in debug mode (vscode)
     gettrace = getattr(sys, "gettrace", None)
@@ -213,7 +214,7 @@ def train_main(config, resume_flag=False):
     else:
         training_set = DDPMLabelsDataset(
             config,
-            load_labelmap_names("ddpm_files_padded.txt")[:256],
+            load_labelmap_names("ddpm_files_padded.txt"),
         )
 
     # closed form results

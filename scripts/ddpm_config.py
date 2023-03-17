@@ -37,6 +37,8 @@ class Configuration:
         self.im_size = getattr(args, "im_size", (28, 28))
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
+        self.downsample = getattr(args, "downsample", False)
+
         self.model_idx = getattr(args, "model_idx", 1)
         self.jei_flag = getattr(args, "jei_flag", 1)
         self.group_labels = getattr(

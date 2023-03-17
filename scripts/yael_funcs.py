@@ -128,10 +128,31 @@ def image_to_logit(args, image):
         -1,
         0,
     )
+
+    if args.downsample:
+        resized_vol = torch.unsqueeze(resized_vol, 0)
+        resized_vol = resized_vol.to(torch.uint8)
+        resized_vol = F.interpolate(
+            resized_vol,
+            scale_factor=0.5,
+            mode="bilinear",
+            align_corners=True,
+            recompute_scale_factor=False,
+            antialias=False,
+        )
+        resized_vol = torch.squeeze(resized_vol)
+        resized_vol = torch.argmax(resized_vol, dim=0)
+        resized_vol = torch.movedim(
+            F.one_hot(resized_vol.to(torch.int64), num_classes=args.im_channels),
+            -1,
+            0,
+        )
+
     if args.jei_flag:
         logit = resized_vol * 7 - 3.5
     else:
         logit = 7 * (resized_vol[1:] - resized_vol[0])
+
     return logit.float()
 
 
