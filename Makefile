@@ -37,7 +37,7 @@ ddpm-train:
 	for model in $(model_idx); do \
 		for schedule in $(beta_schedule); do \
 			for loss in $(loss_type); do \
-				logdir=M$$model\T$(time_steps)$$schedule\G$(group_labels)J$(jei_flag)D1
+				logdir=M$$model\T$(time_steps)$$schedule\L$$loss\G$(group_labels)J$(jei_flag)D1
 				sbatch --job-name=$$logdir submit.sh python -u scripts/main.py train \
 					--model_idx $$model \
 					--time_steps $(time_steps) \
