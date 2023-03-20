@@ -1,17 +1,18 @@
 import os
 import random
 from datetime import datetime
+
 import numpy as np
 import torch
 from accelerate import Accelerator, find_executable_batch_size
-from ddpm_labels.models.model1 import SimpleUnet
-from ddpm_labels.models.model2 import Unet
-from torch.optim import Adam
-from torch.utils.data import DataLoader
-
 from losses import p_losses, reverse_diffusion_sample, sample
 from plotting import plot_diffusion_process
+from torch.optim import Adam
+from torch.utils.data import DataLoader
 from yael_funcs import logit_to_image
+
+from ddpm_labels.models.model1 import SimpleUnet
+from ddpm_labels.models.model2 import Unet
 
 # from torchvision.utils import save_image
 
@@ -72,7 +73,7 @@ def train(config, training_set, cf_results):
     params = {
         "batch_size": config.batch_size,
         "shuffle": True,
-        # "num_workers": 0,
+        "num_workers": 4,
         # "worker_init_fn": np.random.seed(42),
     }
 

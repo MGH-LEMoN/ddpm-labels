@@ -103,7 +103,7 @@ def p_sample_loop(config, model, shape, cf_calculations):
     img = torch.randn(shape, device=device)
     imgs = []
 
-    for i in reversed(range(0, config.T)):
+    for i in reversed(range(0, config.time_steps)):
         img = reverse_diffusion_sample(
             model,
             img,
@@ -120,6 +120,6 @@ def sample(config, model, cf_calculations):
     return p_sample_loop(
         config,
         model,
-        shape=(config.sampling_batch_size, config.channels, *config.im_size),
+        shape=(config.sampling_batch_size, config.im_channels, *config.im_size),
         cf_calculations=cf_calculations,
     )

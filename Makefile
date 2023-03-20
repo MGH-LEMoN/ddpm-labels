@@ -17,15 +17,17 @@ list:
 # Generic Variables
 USR := $(shell whoami | head -c 2)
 DT := $(shell date +"%Y%m%d")
-# -%H%M%S
 
 # Notes: \
-Image Size (96, 112) Batch Size for Model 1: 704, Model 2: 192
+Image Size (96, 112) \
+Batch Size | CPUs | Memory | for \
+Model 1: 688, 3, 96 \
+Model 2: 240, 4, 128 \
 
 
 # ddpm-train: training a model from scratch
 # Training parameters
-model_idx = 2
+model_idx = 1
 time_steps = 800
 beta_schedule = linear cosine quadratic sigmoid
 loss_type = l1 l2 huber
@@ -34,11 +36,10 @@ jei_flag = 1
 group_labels = 0
 lr = 5e-5
 im_size = (96, 112)
-batch_size = 192
+batch_size = 688
 
 # ddpm-resume: train a model from scratch
 ddpm-train:
-# sbatch --job-name=$$logdir submit.sh 
 	for model in $(model_idx); do \
 		for schedule in $(beta_schedule); do \
 			for loss in $(loss_type); do \
@@ -63,11 +64,15 @@ ddpm-train:
 
 # ddpm-resume: resume training
 ddpm-resume:
-	# sbatch --job-name=$(DT)-$(results_dir) submit.sh \
-		python -u scripts/main.py resume-train \
-			/space/calico/1/users/Harsha/ddpm-labels/logs/mnist \
-			--debug \
-			;
+	for model in $(model_idx); do \
+		for schedule in $(beta_schedule); do \
+			for loss in $(loss_type); do \
+				logdir=test-M$$model\T$(time_steps)$$schedule\L$$loss\G$(group_labels)J$(jei_flag)D1
+				sbatch --job-name=$$logdir submit.sh python -u scripts/main.py resume-train \
+					/space/calico/1/users/Harsha/ddpm-labels/logs/$$logdir; \
+			done; \
+		done; \
+	done;
 
 # ddpm-sample: generate samples from a trained model
 ddpm-sample:

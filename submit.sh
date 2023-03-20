@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --account=lcnrtx
-#SBATCH --partition=lcnrtx,rtx6000,rtx8000
+#SBATCH --partition=rtx8000
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gpus=1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=32G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=128G
 #SBATCH --time=7-00:00:00
 #SBATCH --output="./logs/slurm-logs/%x.out"
 #SBATCH --error="./logs/slurm-logs/%x.err"
