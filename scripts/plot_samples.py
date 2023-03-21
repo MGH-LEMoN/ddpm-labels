@@ -194,14 +194,16 @@ def collect_images_into_pdf(target_dir_str):
 def combine_images_to_pdf():
     model_dirs = sorted(glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/M*"))
 
-    for model_dir in model_dirs[:1]:
+    for model_dir in model_dirs:
         print(os.path.basename(model_dir))
         collect_images_into_pdf(model_dir)
 
 
-if __name__ == "__main__":
+def samples_from_epochs():
     # list of all models trained so far in logs directory
-    model_dirs = sorted(glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/M*"))
+    model_dirs = sorted(
+        glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/20230306-M2*linear*")
+    )
 
     for model_dir in model_dirs:
         base_dir = os.path.basename(model_dir)
@@ -211,10 +213,26 @@ if __name__ == "__main__":
 
         print(base_dir)
 
-        model_idx = int(base_dir[1])
-        downsample = int(base_dir[-1])
-        jei_flag = int(base_dir[-3])
-        group_flag = int(base_dir[-5])
+        # model_idx = int(base_dir[1])
+        if "M1" in base_dir:
+            model_idx = 1
+
+        if "M2" in base_dir:
+            model_idx = 2
+
+        if "20230306" in base_dir:
+            jei_flag = int(base_dir[-1])
+            group_flag = int(base_dir[-3])
+
+            downsample = 0
+            im_size = (192, 224)
+
+        else:
+            jei_flag = int(base_dir[-3])
+            group_flag = int(base_dir[-5])
+
+            downsample = int(base_dir[-1])
+            im_size = (96, 112)
 
         im_channels = 24 - 20 * group_flag - (1 - jei_flag)
 
@@ -230,11 +248,6 @@ if __name__ == "__main__":
         if "sigmoid" in base_dir:
             beta_schedule = "sigmoid"
 
-        if downsample:
-            im_size = (96, 112)
-        else:
-            im_size = (192, 224)
-
         config = Configuration(
             25, 800, im_size, beta_schedule, im_channels, jei_flag, downsample
         )
@@ -245,9 +258,6 @@ if __name__ == "__main__":
         cf_calculations = closed_form_equations(config)
 
         model_chkpts = sorted(glob.glob(os.path.join(model_dir, "model_*")))
-
-        chkpt_samples = []
-        epoch_images = {}
 
         for model_chkpt in tqdm(
             model_chkpts, desc="checkpoint", total=len(model_chkpts)
@@ -298,8 +308,6 @@ if __name__ == "__main__":
             row_title = None
             imshow_kwargs = {}
 
-            # pdf = PdfPages(file_name)
-
             if "reverse" in file_name:
                 time_steps = config.plot_time_steps[::-1]
 
@@ -345,12 +353,9 @@ if __name__ == "__main__":
                     axs[row_idx, 0].set(ylabel=row_title[row_idx])
 
             plt.subplots_adjust(wspace=0, hspace=0)
-            # save_file = os.path.join(
-            #     logdir,
-            #     file_name,
-            # )
             plt.savefig(file_name, bbox_inches="tight", dpi=75)
-
-            # pdf.savefig(fig, dpi=25)
-            # pdf.close()
             plt.close()
+
+
+if __name__ == "__main__":
+    combine_images_to_pdf()
