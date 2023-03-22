@@ -31,11 +31,12 @@ model_idx = 1
 time_steps = 800
 beta_schedule = linear cosine quadratic sigmoid
 loss_type = l1 l2 huber
-epochs = 1000
+epochs = 500
 jei_flag = 1
-group_labels = 0
+group_labels = 2
 lr = 5e-5
 im_size = (96, 112)
+downsampled = 1
 batch_size = 688
 
 # ddpm-resume: train a model from scratch
@@ -43,7 +44,7 @@ ddpm-train:
 	for model in $(model_idx); do \
 		for schedule in $(beta_schedule); do \
 			for loss in $(loss_type); do \
-				logdir=M$$model\T$(time_steps)$$schedule\L$$loss\G$(group_labels)J$(jei_flag)D1
+				logdir=M$$model\T$(time_steps)$$schedule\L$$loss\G$(group_labels)J$(jei_flag)D$(downsampled)
 				sbatch --job-name=$$logdir submit.sh python -u scripts/main.py train \
 					--model_idx $$model \
 					--time_steps $(time_steps) \

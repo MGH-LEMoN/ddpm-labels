@@ -2,7 +2,7 @@ import pathlib
 
 import numpy as np
 import torch
-from utils import group_labels
+from utils import group_labels, group_left_right
 from yael_funcs import image_to_logit
 
 from ext.lab2im.utils import load_volume
@@ -33,8 +33,12 @@ class DDPMLabelsDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         vol = load_volume(self.files[index])
-        if self.config.group_labels:
+        if self.config.group_labels == 1:
             vol = np.vectorize(group_labels().get)(vol)
+
+        if self.config.group_labels == 2:
+            vol = np.vectorize(group_left_right().get)(vol)
+
         return image_to_logit(self.config, vol)
 
     def __len__(self):

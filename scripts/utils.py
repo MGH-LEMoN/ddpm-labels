@@ -235,6 +235,26 @@ def group_labels():
     return my_dict
 
 
+def group_left_right():
+    right_to_left_map = {  # mapping right to left
+        14: 1,
+        15: 2,
+        16: 3,
+        17: 4,
+        18: 5,
+        19: 6,
+        20: 7,
+        21: 10,
+        22: 12,
+        23: 13,
+    }
+
+    unchanged_labels = range(0, 14)  # left labels
+    unchanged_labels_map = dict(zip(unchanged_labels, unchanged_labels))
+
+    return unchanged_labels_map | right_to_left_map
+
+
 if __name__ == "__main__":
     # site_list = list_unique_sites()
     # print(site_list)

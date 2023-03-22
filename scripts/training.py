@@ -73,7 +73,7 @@ def train(config, training_set, cf_results):
     params = {
         "batch_size": config.batch_size,
         "shuffle": True,
-        "num_workers": 4,
+        "num_workers": 3,
         # "worker_init_fn": np.random.seed(42),
     }
 

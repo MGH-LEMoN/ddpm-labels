@@ -56,7 +56,10 @@ class Configuration:
         if self.debug:
             self.im_channels = 1
         else:
-            self.im_channels = 24 - 20 * self.group_labels - (1 - self.jei_flag)
+            group_labels_flag_dict = {0: 24, 1: 4, 2: 14}
+            self.im_channels = group_labels_flag_dict[self.group_labels] - (
+                1 - self.jei_flag
+            )
 
         self.lr = getattr(args, "lr", 1e-3)
         self.loss_type = getattr(args, "loss_type", "l1")
