@@ -33,7 +33,7 @@ def logit_yael(prob):
     return logit
 
 
-def color_map_for_data():
+def rgb_map_for_data():
     _, fs_names, fs_colors = extract_numbers_names_colors(
         "/usr/local/freesurfer/dev/FreeSurferColorLUT.txt"
     )
@@ -54,6 +54,12 @@ def color_map_for_data():
     my_colors = [
         fs_colors[fs_names.index(item)] for item in voxmorph_label_index_dict.values()
     ]
+
+    return my_colors
+
+
+def color_map_for_data():
+    my_colors = rgb_map_for_data()
     cmap = mcolors.ListedColormap(np.array(my_colors) / 255)
 
     # fig = plt.figure()
