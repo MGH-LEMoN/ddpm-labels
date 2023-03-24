@@ -192,18 +192,21 @@ def collect_images_into_pdf(target_dir_str):
 
 
 def combine_images_to_pdf():
-    model_dirs = sorted(glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/M*"))
+    model_dirs = sorted(
+        # glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/*G1*D1")
+    )
 
     for model_dir in model_dirs:
         print(os.path.basename(model_dir))
         collect_images_into_pdf(model_dir)
 
 
-def samples_from_epochs():
+def samples_from_epochs(model_dirs):
     # list of all models trained so far in logs directory
-    model_dirs = sorted(
-        glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/20230306-M2*linear*")
-    )
+    # model_dirs = reversed(
+    #     sorted(glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/*G2*"))
+    # )
+    model_dirs = [model_dirs]
 
     for model_dir in model_dirs:
         base_dir = os.path.basename(model_dir)
@@ -222,19 +225,23 @@ def samples_from_epochs():
 
         if "20230306" in base_dir:
             jei_flag = int(base_dir[-1])
-            group_flag = int(base_dir[-3])
+            group_labels = int(base_dir[-3])
 
             downsample = 0
             im_size = (192, 224)
 
         else:
             jei_flag = int(base_dir[-3])
-            group_flag = int(base_dir[-5])
+            group_labels = int(base_dir[-5])
 
             downsample = int(base_dir[-1])
             im_size = (96, 112)
 
-        im_channels = 24 - 20 * group_flag - (1 - jei_flag)
+        if DEBUG:
+            im_channels = 1
+        else:
+            group_labels_flag_dict = {0: 24, 1: 4, 2: 14}
+            im_channels = group_labels_flag_dict[group_labels] - (1 - jei_flag)
 
         if "linear" in base_dir:
             beta_schedule = "linear"
@@ -259,15 +266,19 @@ def samples_from_epochs():
 
         model_chkpts = sorted(glob.glob(os.path.join(model_dir, "model_*")))
 
-        for model_chkpt in tqdm(
-            model_chkpts, desc="checkpoint", total=len(model_chkpts)
-        ):
+        for model_chkpt in model_chkpts:
             epoch_num = os.path.basename(model_chkpt).split("_")[-1]
             epoch_num_int = int(epoch_num)
 
+            print(f"Running Checkpoint: {epoch_num}")
+
             save_file = f"{model_dir}/images/{base_dir}-reverse-{epoch_num}.png"
+
+            # Skip if file already exists
             if os.path.isfile(save_file):
-                curr_file = f"{model_dir}/images/reverse_process-{epoch_num[1:]}.png"
+                curr_file = (
+                    f"{model_dir}/images/reverse_process-{epoch_num[1:]}.png"
+                )
                 if os.path.isfile(curr_file):
                     os.remove(curr_file)
                 continue
@@ -353,9 +364,9 @@ def samples_from_epochs():
                     axs[row_idx, 0].set(ylabel=row_title[row_idx])
 
             plt.subplots_adjust(wspace=0, hspace=0)
-            plt.savefig(file_name, bbox_inches="tight", dpi=75)
+            plt.savefig(file_name, bbox_inches="tight")
             plt.close()
 
 
 if __name__ == "__main__":
-    combine_images_to_pdf()
+    samples_from_epochs(sys.argv[1])  # see ddpm-sample target in the Makefile

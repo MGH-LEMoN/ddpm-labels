@@ -21,23 +21,23 @@ DT := $(shell date +"%Y%m%d")
 # Notes: \
 Image Size (96, 112) \
 Batch Size | CPUs | Memory | for \
-Model 1: 688, 3, 96 \
+Model 1: 688, 3, 96 \ (possibly ignore this model going forward)
 Model 2: 240, 4, 128 \
 
 
 # ddpm-train: training a model from scratch
 # Training parameters
-model_idx = 1
+model_idx = 2
 time_steps = 800
 beta_schedule = linear cosine quadratic sigmoid
 loss_type = l1 l2 huber
 epochs = 500
 jei_flag = 1
-group_labels = 2
+group_labels = 1
 lr = 5e-5
 im_size = (96, 112)
 downsampled = 1
-batch_size = 688
+batch_size = 240
 
 # ddpm-resume: train a model from scratch
 ddpm-train:
@@ -77,7 +77,14 @@ ddpm-resume:
 
 # ddpm-sample: generate samples from a trained model
 ddpm-sample:
-# TODO:
+	for model_dir in `ls -d1 -r /space/calico/1/users/Harsha/ddpm-labels/logs/*G2*`; do \
+		model=`basename $$model_dir`
+	 	sbatch --job-name=sample-$$model submit.sh python scripts/plot_samples.py $$model_dir
+	done;
+
+# ddpm-images-to-pdf: collect all images into a pdf
+ddpm-images-to-pdf:
+	python -c "from scripts import combine_images_to_pdf; combine_images_to_pdf()"
 
 # ddpm-test: change self.DEBUG to TRUE in ddpm_config.py
 # please refer to ddpm-labels/models/model1.py and model2.py for more info

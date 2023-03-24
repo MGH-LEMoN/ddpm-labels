@@ -6,7 +6,7 @@
 #SBATCH --gpus=1
 #SBATCH --cpus-per-task=3
 #SBATCH --mem=96G
-#SBATCH --time=4-00:00:00
+#SBATCH --time=06:00:00
 #SBATCH --output="./logs/slurm-logs/%x.out"
 #SBATCH --error="./logs/slurm-logs/%x.err"
 #SBATCH --mail-user=hvgazula@umich.edu
