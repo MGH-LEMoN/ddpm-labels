@@ -180,14 +180,9 @@ def collect_images_into_pdf(target_dir_str):
     base_dir = os.path.basename(target_dir_str)
 
     out_file = os.path.join(target_dir_str, base_dir + ".pdf")
-    images = sorted(glob.glob(os.path.join(target_dir, "*")))
+    images = sorted(glob.glob(os.path.join(target_dir, "*.png")))
 
-    pdf_img_list = []
-    for image in images:
-        img = Image.open(image)
-        img = img.convert("RGB")
-        pdf_img_list.append(img)
-
+    pdf_img_list = [Image.open(image).convert("RGB") for image in images]
     pdf_img_list[0].save(out_file, save_all=True, append_images=pdf_img_list[1:])
 
 
