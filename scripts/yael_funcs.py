@@ -124,35 +124,41 @@ def prob_to_rgb(image, implicit=False, colormap=None):
     return cimage.clamp_(0, 1)
 
 
-def image_to_logit(args, image):
-    resized_vol = torch.Tensor(image.astype(np.uint8))
-
-    # one-hot encode the label map and
-    # HWC to CHW and add batch dimension
+def downsample_label_map(args, img):
+    resized_vol = torch.unsqueeze(resized_vol, 0)
+    resized_vol = resized_vol.to(torch.uint8)
+    resized_vol = F.interpolate(
+        resized_vol,
+        scale_factor=0.5,
+        mode="bilinear",
+        align_corners=True,
+        recompute_scale_factor=False,
+        antialias=False,
+    )
+    resized_vol = torch.squeeze(resized_vol)
+    resized_vol = torch.argmax(resized_vol, dim=0)
     resized_vol = torch.movedim(
         F.one_hot(resized_vol.to(torch.int64), num_classes=args.im_channels),
         -1,
         0,
     )
 
+    return resized_vol
+
+
+def image_to_logit(args, image):
+    resized_vol = torch.tensor(image, dtype=torch.int64)
+
+    # one-hot encode the label map and
+    # HWC to CHW and add batch dimension
+    resized_vol = torch.movedim(
+        F.one_hot(resized_vol, num_classes=args.im_channels),
+        -1,
+        0,
+    )
+
     if args.downsample:
-        resized_vol = torch.unsqueeze(resized_vol, 0)
-        resized_vol = resized_vol.to(torch.uint8)
-        resized_vol = F.interpolate(
-            resized_vol,
-            scale_factor=0.5,
-            mode="bilinear",
-            align_corners=True,
-            recompute_scale_factor=False,
-            antialias=False,
-        )
-        resized_vol = torch.squeeze(resized_vol)
-        resized_vol = torch.argmax(resized_vol, dim=0)
-        resized_vol = torch.movedim(
-            F.one_hot(resized_vol.to(torch.int64), num_classes=args.im_channels),
-            -1,
-            0,
-        )
+        resized_vol = downsample_label_map(args, resized_vol)
 
     if args.jei_flag:
         logit = resized_vol * 7 - 3.5
