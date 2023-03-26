@@ -50,10 +50,14 @@ def select_model(config):
                 dim_mults=(1, 2, 4),
             )
         else:
+            if not config.downsample:
+                dim_mults = (2, 4, 8, 16, 32, 64)
+            else:
+                dim_mults = (2, 4, 8, 16, 32)
             model = Unet(
                 dim=16,
                 channels=config.im_channels,
-                dim_mults=(2, 4, 8, 16, 32),
+                dim_mults=dim_mults,
             )
     else:
         print("Invalid Model ID")

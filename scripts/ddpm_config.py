@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 from datetime import datetime
@@ -16,7 +17,7 @@ class Configuration:
     This configuration object is a collection of all variables relevant to the analysis
     """
 
-    def __init__(self, args, config_file_name=None):
+    def __init__(self, args, update=0, config_file_name=None):
         PRJCT_FOLDER = os.getcwd()
 
         self.logdir = getattr(args, "logdir", os.getcwd())
@@ -71,8 +72,6 @@ class Configuration:
         if config_file_name:
             config_file_name = os.path.join(self.logdir, config_file_name)
 
-        self._write_config(config_file_name)
-
         self.start_epoch = getattr(args, "start_epoch", 0)
         self.checkpoint = getattr(args, "checkpoint", None)
 
@@ -80,8 +79,11 @@ class Configuration:
         self.sampling_freq = getattr(args, "sampling_freq", 10)
         self.checkpoint_freq = getattr(args, "checkpoint_freq", 10)
 
-        args.COMMIT_HASH = ext_utils.get_git_revision_short_hash()
-        args.CREATED_ON = f'{datetime.now().strftime("%A %m/%d/%Y %H:%M:%S")}'
+        self.COMMIT_HASH = ext_utils.get_git_revision_short_hash()
+        self.CREATED_ON = f'{datetime.now().strftime("%A %m/%d/%Y %H:%M:%S")}'
+
+        if update or not os.path.isfile(os.path.join(self.logdir, "config.json")):
+            self._write_config(config_file_name)
 
     def _write_config(self, file_name=None):
         """Write configuration to a file
@@ -104,6 +106,16 @@ class Configuration:
 
         with open(config_file, "w") as outfile:
             outfile.write(json_object)
+
+    @classmethod
+    def read_config(self, file_name):
+        """Read configuration from a file"""
+        with open(file_name, "r") as fh:
+            config_dict = json.load(fh)
+
+        args = argparse.Namespace(**config_dict)
+
+        return args
 
 
 if __name__ == "__main__":

@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+import argparse
 import glob
+import json
 import os
 import sys
 
 import torch
 from tqdm.auto import tqdm
+from ddpm_config import Configuration
 
 sys.path.append(os.getcwd())
 
@@ -23,64 +25,7 @@ from yael_funcs import logit_to_image
 
 from ddpm_labels.models.model1 import SimpleUnet
 from ddpm_labels.models.model2 import Unet
-
-DEBUG = False
-
-
-class Configuration:
-    """
-    This configuration object is a collection of all variables relevant to the analysis
-    """
-
-    def __init__(
-        self,
-        sampling_batch_size,
-        time_steps,
-        im_size,
-        beta_schedule,
-        im_channels,
-        jei_flag,
-        downsample,
-    ):
-        self.time_steps = time_steps
-        self.im_size = im_size
-        self.beta_schedule = beta_schedule
-        self.im_channels = im_channels
-        self.jei_flag = jei_flag
-        self.logdir = "./"
-        self.DEBUG = False
-        self.downsample = downsample
-
-        self.sampling_batch_size = sampling_batch_size
-
-        self.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-        self.plot_time_steps = [0, 100, 200, 300, 400, 500, 600, 700, 799]
-
-
-def select_model(config, model_idx, image_channels):
-    if model_idx == 1:
-        model = SimpleUnet(image_channels)
-    elif model_idx == 2:
-        if DEBUG:
-            model = Unet(
-                dim=16,
-                channels=image_channels,
-                dim_mults=(1, 2, 4),
-            )
-        else:
-            if not config.downsample:
-                dim_mults = (2, 4, 8, 16, 32, 64)
-            else:
-                dim_mults = (2, 4, 8, 16, 32)
-            model = Unet(
-                dim=16,
-                channels=image_channels,
-                dim_mults=dim_mults,
-            )
-    else:
-        print("Invalid Model ID")
-        exit()
-    return model
+from training import select_model
 
 
 def plot_from_pickle_files():
@@ -198,12 +143,15 @@ def combine_images_to_pdf():
 
 def samples_from_epochs(model_dirs):
     # list of all models trained so far in logs directory
-    # model_dirs = reversed(
-    #     sorted(glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/*G2*"))
-    # )
-    model_dirs = [model_dirs]
 
-    for model_dir in model_dirs:
+    if model_dirs is None:
+        model_dirs = sorted(
+            glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/*RGB")
+        )
+    else:
+        model_dirs = [model_dirs]
+
+    for model_dir in model_dirs[:1]:
         base_dir = os.path.basename(model_dir)
 
         if not os.path.isdir(os.path.join(model_dir, "images")):
@@ -211,57 +159,17 @@ def samples_from_epochs(model_dirs):
 
         print(base_dir)
 
-        # model_idx = int(base_dir[1])
-        if "M1" in base_dir:
-            model_idx = 1
+        config = Configuration.read_config(os.path.join(model_dir, "config.json"))
+        config.sampling_batch_size = (num_samples := 1)
 
-        if "M2" in base_dir:
-            model_idx = 2
-
-        if "20230306" in base_dir:
-            jei_flag = int(base_dir[-1])
-            group_labels = int(base_dir[-3])
-
-            downsample = 0
-            im_size = (192, 224)
-
-        else:
-            jei_flag = int(base_dir[-3])
-            group_labels = int(base_dir[-5])
-
-            downsample = int(base_dir[-1])
-            im_size = (96, 112)
-
-        if DEBUG:
-            im_channels = 1
-        else:
-            group_labels_flag_dict = {0: 24, 1: 4, 2: 14}
-            im_channels = group_labels_flag_dict[group_labels] - (1 - jei_flag)
-
-        if "linear" in base_dir:
-            beta_schedule = "linear"
-
-        if "cosine" in base_dir:
-            beta_schedule = "cosine"
-
-        if "quadratic" in base_dir:
-            beta_schedule = "quadratic"
-
-        if "sigmoid" in base_dir:
-            beta_schedule = "sigmoid"
-
-        config = Configuration(
-            25, 800, im_size, beta_schedule, im_channels, jei_flag, downsample
-        )
-
-        model = select_model(config, model_idx, im_channels)
-        model.to(config.DEVICE)
+        model = select_model(config)
+        model.to(config.device)
 
         cf_calculations = closed_form_equations(config)
 
         model_chkpts = sorted(glob.glob(os.path.join(model_dir, "model_*")))
 
-        for model_chkpt in model_chkpts:
+        for model_chkpt in model_chkpts[:1]:
             epoch_num = os.path.basename(model_chkpt).split("_")[-1]
             epoch_num_int = int(epoch_num)
 
@@ -271,9 +179,7 @@ def samples_from_epochs(model_dirs):
 
             # Skip if file already exists
             if os.path.isfile(save_file):
-                curr_file = (
-                    f"{model_dir}/images/reverse_process-{epoch_num[1:]}.png"
-                )
+                curr_file = f"{model_dir}/images/reverse_process-{epoch_num[1:]}.png"
                 if os.path.isfile(curr_file):
                     os.remove(curr_file)
                 continue
@@ -293,7 +199,7 @@ def samples_from_epochs(model_dirs):
             #         pickle.dump(samples, fh)
 
             imgs = []
-            for choice in range(num_samples := 20):
+            for choice in range(num_samples):
                 select_imgs = [
                     samples[time_step][choice] for time_step in config.plot_time_steps
                 ]
@@ -335,7 +241,7 @@ def samples_from_epochs(model_dirs):
                 # row = [image] + row if with_orig else row
                 for col_idx, img in enumerate(row):
                     ax = axs[row_idx, col_idx]
-                    if config.DEBUG:
+                    if config.debug:
                         ax.imshow(np.asarray(img[0]), cmap="gray", **imshow_kwargs)
                     else:
                         ax.imshow(np.asarray(img), **imshow_kwargs)
@@ -364,4 +270,6 @@ def samples_from_epochs(model_dirs):
 
 
 if __name__ == "__main__":
-    samples_from_epochs(sys.argv[1])  # see ddpm-sample target in the Makefile
+    samples_from_epochs(
+        sys.argv[1] if len(sys.argv) > 1 else None
+    )  # see ddpm-sample target in the Makefile
