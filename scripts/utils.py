@@ -18,7 +18,7 @@ from ext.lab2im.utils import (
     save_volume,
 )
 
-PRJCT_DIR = "/space/calico/1/users/Harsha/ddpm-labels"
+PRJCT_DIR = os.getcwd()
 DATA_DIR = os.path.join(PRJCT_DIR, "data")
 RESULTS_DIR = os.path.join(PRJCT_DIR, "results")
 
@@ -149,10 +149,10 @@ def get_site_slice_shapes(site_list=None):
 
 def copy_label_maps():
     """Copy label maps from source folder to destination"""
-    dst_dir = "/space/calico/1/users/Harsha/ddpm-labels/data/label-maps"
+    dst_dir = LABEL_MAPS_COPY
     os.makedirs(dst_dir, exist_ok=True)
 
-    filename = load_labelmap_names()
+    filename = load_labelmap_names("ddpm_file_list1.txt")
 
     for file in tqdm(filename):
         dst_file = pathlib.Path(file).parent.parts[-1] + ".mgz"
@@ -219,6 +219,11 @@ def pad_compact_label_maps(maximum_size, labels_dir=None, result_dir=None):
 
 
 def group_labels():
+    """Map to merge.group labels into one of WM/GM/CSF/BG
+
+    Returns:
+        dict: (old_label, new_label) pairs
+    """
     new_labels = [0, 1, 2, 3]
 
     background = [0]
@@ -236,6 +241,11 @@ def group_labels():
 
 
 def group_left_right():
+    """Map to merge/group left and right labels into one (left)
+
+    Returns:
+        dict: (right_label: left_label) pairs
+    """
     right_to_left_map = {  # mapping right to left
         14: 1,
         15: 2,
