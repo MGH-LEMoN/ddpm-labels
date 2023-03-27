@@ -125,7 +125,7 @@ def prob_to_rgb(image, implicit=False, colormap=None):
 
 
 def downsample_label_map(args, img):
-    resized_vol = torch.unsqueeze(resized_vol, 0)
+    resized_vol = torch.unsqueeze(img, 0)
     resized_vol = resized_vol.to(torch.uint8)
     resized_vol = F.interpolate(
         resized_vol,
