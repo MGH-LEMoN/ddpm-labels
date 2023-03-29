@@ -4,10 +4,10 @@ import glob
 import os
 import sys
 
+sys.path.append(os.getcwd())
+
 import torch
 from ddpm_config import Configuration
-
-sys.path.append(os.getcwd())
 
 import matplotlib.pyplot as plt
 import numpy as np
