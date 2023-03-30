@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from yael_funcs import (
+from scripts.yael_funcs import (
     color_map_for_data,
     prob_to_rgb,
     softmax_jei,

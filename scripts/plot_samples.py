@@ -4,21 +4,19 @@ import glob
 import os
 import sys
 
-sys.path.append(os.getcwd())
-
 import torch
-from ddpm_config import Configuration
+from scripts.ddpm_config import Configuration
 
 import matplotlib.pyplot as plt
 import numpy as np
-from beta_schedule import closed_form_equations
-from losses import sample
+from scripts.beta_schedule import closed_form_equations
+from scripts.losses import sample
 from PIL import Image
-from plotting import plot_diffusion_process
-from training import select_model
+from scripts.plotting import plot_diffusion_process
+from scripts.training import select_model
 
 # turn back into RGB image
-from yael_funcs import logit_to_image
+from scripts.yael_funcs import logit_to_image
 
 
 def collect_images_into_pdf(target_dir_str):
@@ -36,9 +34,9 @@ def collect_images_into_pdf(target_dir_str):
     pdf_img_list[0].save(out_file, save_all=True, append_images=pdf_img_list[1:])
 
 
-def combine_images_to_pdf():
+def combine_images_to_pdf(model_filter):
     model_dirs = sorted(
-        # glob.glob("/space/calico/1/users/Harsha/ddpm-labels/logs/*G1*D1")
+        glob.glob(f"/space/calico/1/users/Harsha/ddpm-labels/logs/{model_filter}")
     )
 
     for model_dir in model_dirs:

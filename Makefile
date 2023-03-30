@@ -78,7 +78,7 @@ ddpm-resume:
 
 
 ## ddpm-sample: generate samples from a trained model
-ddpm-sample: model_filter = M1* # other examples: {M2* | M2*G2*D0 | ...}
+%-sample: model_filter = M2*G2*D0 # other examples: {M2* | M2*G2*D0 | ...}
 ddpm-sample:
 	for model_dir in `ls -d1 -r /space/calico/1/users/Harsha/ddpm-labels/logs/$(model_filter)`; do \
 		model=`basename $$model_dir`
@@ -88,7 +88,7 @@ ddpm-sample:
 
 ## ddpm-images-to-pdf: collect all images into a pdf
 ddpm-images-to-pdf:
-	python -c "from scripts import combine_images_to_pdf; combine_images_to_pdf()"
+	python -c "from scripts.plot_samples import combine_images_to_pdf; combine_images_to_pdf('M2*G2*D0')"
 
 
 ## ddpm-test: test changes to code using fashion-mnist data

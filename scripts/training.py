@@ -5,11 +5,11 @@ from datetime import datetime
 import numpy as np
 import torch
 from accelerate import Accelerator, find_executable_batch_size
-from losses import p_losses, reverse_diffusion_sample, sample
-from plotting import plot_diffusion_process
+from scripts.losses import p_losses, reverse_diffusion_sample, sample
+from scripts.plotting import plot_diffusion_process
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from yael_funcs import logit_to_image
+from scripts.yael_funcs import logit_to_image
 
 from ddpm_labels.models.model1 import SimpleUnet
 from ddpm_labels.models.model2 import Unet

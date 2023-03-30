@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-import utils as my_utils
+import scripts.utils as my_utils
 
 from ext.lab2im import utils
 from ext.mindboggle.labels import extract_numbers_names_colors
