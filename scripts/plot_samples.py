@@ -4,6 +4,8 @@ import glob
 import os
 import sys
 
+sys.path.append(os.getcwd())
+
 import torch
 from scripts.ddpm_config import Configuration
 
@@ -31,12 +33,16 @@ def collect_images_into_pdf(target_dir_str):
     images = sorted(glob.glob(os.path.join(target_dir, "*.png")))
 
     pdf_img_list = [Image.open(image).convert("RGB") for image in images]
-    pdf_img_list[0].save(out_file, save_all=True, append_images=pdf_img_list[1:])
+    pdf_img_list[0].save(
+        out_file, save_all=True, append_images=pdf_img_list[1:]
+    )
 
 
 def combine_images_to_pdf(model_filter):
     model_dirs = sorted(
-        glob.glob(f"/space/calico/1/users/Harsha/ddpm-labels/logs/{model_filter}")
+        glob.glob(
+            f"/space/calico/1/users/Harsha/ddpm-labels/logs/{model_filter}"
+        )
     )
 
     for model_dir in model_dirs:
@@ -64,7 +70,9 @@ def samples_from_epochs(model_dirs):
         os.makedirs(img_dir, exist_ok=True)
 
         # read config.json from the model/experiment
-        config = Configuration.read_config(os.path.join(model_dir, "config.json"))
+        config = Configuration.read_config(
+            os.path.join(model_dir, "config.json")
+        )
 
         # add attribute (as it is missing)
         config.sampling_batch_size = (num_samples := 1)
@@ -83,7 +91,9 @@ def samples_from_epochs(model_dirs):
 
             print(f"Running Checkpoint: {epoch_num}")
 
-            out_file_name = os.path.join(img_dir, f"{base_dir}-reverse-{epoch_num}.png")
+            out_file_name = os.path.join(
+                img_dir, f"{base_dir}-reverse-{epoch_num}.png"
+            )
 
             # Skip if file already exists
             if os.path.isfile(out_file_name):
@@ -101,7 +111,8 @@ def samples_from_epochs(model_dirs):
             imgs = []
             for choice in range(num_samples):
                 select_imgs = [
-                    samples[time_step][choice] for time_step in config.plot_time_steps
+                    samples[time_step][choice]
+                    for time_step in config.plot_time_steps
                 ]
                 denoised_images = [
                     logit_to_image(config, torch.Tensor(select_img))
@@ -137,7 +148,9 @@ def samples_from_epochs(model_dirs):
                 for col_idx, img in enumerate(row):
                     ax = axs[row_idx, col_idx]
                     if config.debug:
-                        ax.imshow(np.asarray(img[0]), cmap="gray", **imshow_kwargs)
+                        ax.imshow(
+                            np.asarray(img[0]), cmap="gray", **imshow_kwargs
+                        )
                     else:
                         ax.imshow(np.asarray(img), **imshow_kwargs)
                     ax.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
@@ -152,7 +165,10 @@ def samples_from_epochs(model_dirs):
                         ax.set_ylabel(f"Sample {row_idx + 1}")
 
                     # print epoch number (at bottom row and center column)
-                    if row_idx == (num_samples - 1) and col_idx == len(time_steps) // 2:
+                    if (
+                        row_idx == (num_samples - 1)
+                        and col_idx == len(time_steps) // 2
+                    ):
                         ax.set_xlabel(f"Epoch {epoch_num}")
 
             if with_orig:
