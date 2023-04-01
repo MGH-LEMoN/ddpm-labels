@@ -3,12 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scripts.yael_funcs import (
-    color_map_for_data,
-    prob_to_rgb,
-    softmax_jei,
-    softmax_yael,
-)
+from scripts.yael_funcs import logit_to_image
 
 
 # source: https://pytorch.org/vision/stable/auto_examples/plot_transforms.html#sphx-glr-auto-examples-plot-transforms-py
@@ -22,10 +17,7 @@ def plot_diffusion_process(
         with_orig (bool, optional): _description_. Defaults to False.
         row_title (_type_, optional): _description_. Defaults to None.
     """
-    if not config:
-        logdir = "logs"
-    else:
-        logdir = config.logdir
+    logdir = config.logdir if config else "logs"
 
     if "reverse" in file_name:
         time_steps = config.plot_time_steps[::-1]
@@ -46,10 +38,10 @@ def plot_diffusion_process(
         # row = [image] + row if with_orig else row
         for col_idx, img in enumerate(row):
             ax = axs[row_idx, col_idx]
-            if config.debug:
-                ax.imshow(np.asarray(img[0]), cmap="gray", **imshow_kwargs)
-            else:
-                ax.imshow(np.asarray(img), **imshow_kwargs)
+
+            cmap = "gray" if img.dim() == 2 else "viridis"
+            ax.imshow(np.asarray(img), cmap=cmap, **imshow_kwargs)
+
             ax.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             ax.set(title=rf"{str(time_steps[col_idx])}")
             ax.title.set_size(10)
@@ -72,23 +64,21 @@ def plot_diffusion_process(
 # display a few images to check the label maps
 def show_images(config, data, num_samples=20, cols=4):
     """Plots some samples from the dataset"""
+
     fig = plt.figure(figsize=(10, 10))
     plt.tight_layout()
-    for i, img in enumerate(data):
-        if i == num_samples:
-            break
+
+    # randomly sample num_samples indices
+    sample_ids = np.random.permutation(len(data))[:num_samples]
+
+    for i, sample_id in enumerate(sample_ids):
         plt.subplot(num_samples // cols + 3, cols, i + 1)
 
-        if config.debug:
-            plt.imshow(img[0], interpolation="nearest", cmap="gray")
-        else:
-            if config.jei_flag:
-                img = softmax_jei(img)
-            else:
-                img = softmax_yael(img)
+        img = data[sample_id]
+        img = img.squeeze() if config.debug else logit_to_image(config, img)
 
-            img = prob_to_rgb(img, implicit=True, colormap=color_map_for_data())
-            plt.imshow(img, interpolation="nearest")
+        cmap = "gray" if img.dim() == 2 else "viridis"
+        plt.imshow(img, interpolation="nearest", cmap=cmap)
 
         plt.xticks([])
         plt.yticks([])

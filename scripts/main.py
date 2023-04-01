@@ -5,123 +5,29 @@ import ast
 import glob
 import json
 import os
-import random
 import sys
-from argparse import ArgumentParser
 
 sys.path.append(os.getcwd())
-
 
 import numpy as np
 import torch
 from beta_schedule import closed_form_equations
-from data_loaders import DDPMLabelsDataset
+from data_loaders import DDPMLabelsDataset, FashionMnistDataset
 from ddpm_config import Configuration
+from ddpm_parser import parse_cmdline_arguments
 from losses import forward_diffusion_sample
 from plotting import plot_diffusion_process, show_images
 from training import auto_train, train
 from utils import load_labelmap_names
 from yael_funcs import logit_to_image
 
-from ext.lab2im.utils import infer
+from ext.utils import set_seed
 
 
-def parse_cmdline_arguments():
-    parser = ArgumentParser()
+def main():
+    args = parse_cmdline_arguments()
 
-    subparsers = parser.add_subparsers(help="sub-command help")
-
-    # create the parser for the "resume-train" command
-    parser_resume = subparsers.add_parser(
-        "resume-train", help="Use this sub-command for resuming training"
-    )
-    parser_resume.add_argument(
-        "logdir",
-        type=str,
-        help="""Folder containing previous checkpoints""",
-    )
-    parser_resume.add_argument("--debug", action="store_true", dest="debug")
-
-    # create the parser for the "train" command
-    parser_train = subparsers.add_parser(
-        "train", help="Use this sub-command for training"
-    )
-
-    parser_train.add_argument("--debug", action="store_true", dest="debug")
-    parser_train.add_argument("--model_idx", type=int, dest="model_idx", default=1)
-    parser_train.add_argument("--epochs", type=int, dest="epochs", default=500)
-    parser_train.add_argument("--batch_size", type=int, dest="batch_size", default=32)
-    parser_train.add_argument("--time_steps", type=int, dest="time_steps", default=500)
-    parser_train.add_argument(
-        "--beta_schedule", type=str, dest="beta_schedule", default="linear"
-    )
-    parser_train.add_argument("--logdir", type=str, dest="logdir", default="test")
-    parser_train.add_argument("--jei_flag", type=int, dest="jei_flag", default=0)
-    parser_train.add_argument(
-        "--group_labels", type=int, dest="group_labels", default=0
-    )
-    parser_train.add_argument("--lr", type=float, dest="lr", default=5e-5)
-    parser_train.add_argument(
-        "--im_size", nargs="?", type=infer, dest="im_size", default=None
-    )
-    parser_train.add_argument("--im_channels", type=int, dest="im_channels", default=1)
-    parser_train.add_argument(
-        "--loss_type", type=str, dest="loss_type", default="huber"
-    )
-    parser_train.add_argument("--downsample", action="store_true", dest="downsample")
-
-    # If running the code in debug mode (vscode)
-    gettrace = getattr(sys, "gettrace", None)
-
-    if gettrace():
-        sys.argv = [
-            "main.py",
-            "train",
-            "--lr",
-            "1e-4",
-            "--time_steps",
-            "800",
-            "--jei_flag",
-            "1",
-            "--group_labels",
-            "1",
-            "--logdir",
-            "test1",
-            "--im_size",
-            "(192, 224)",
-            "--epochs",
-            "10",
-            "--beta_schedule",
-            "linear",
-            "--model_idx",
-            "1",
-        ]
-
-        # sys.argv = [
-        #     "main.py",
-        #     "resume-train",
-        #     "/space/calico/1/users/Harsha/ddpm-labels/logs/20230313-test",
-        #     "--debug",
-        # ]
-
-        # sys.argv = [
-        #     "main.py",
-        #     "train",
-        #     "--model_idx",
-        #     "1",
-        #     "--time_steps",
-        #     "300",
-        #     "--beta_schedule",
-        #     "linear",
-        #     "--results_dir",
-        #     "mnist",
-        #     "--epochs",
-        #     "10",
-        #     "--image_size",
-        #     "(28, 28)",
-        # ]
-
-    args = parser.parse_args()
+    set_seed()
 
     if sys.argv[1] == "train":
         try:
@@ -161,21 +67,6 @@ def parse_cmdline_arguments():
     return args
 
 
-def set_seed(seed: int = 42) -> None:
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-
-    # When running on the CuDNN backend, two further options must be set
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-
-    # Set a fixed value for the hash seed
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    print(f"Random seed set as {seed}")
-
-
 def get_noisy_image(config, x_start, t, cf_results):
     # add noise
     x_noisy, _ = forward_diffusion_sample(x_start, t, cf_results)
@@ -191,29 +82,7 @@ def get_noisy_image(config, x_start, t, cf_results):
 
 def train_main(config, resume_flag=False):
     if config.debug:
-        from datasets import load_dataset
-        from torchvision import transforms
-        from torchvision.transforms import Compose
-
-        dataset = load_dataset("fashion_mnist")
-        transform = Compose(
-            [
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Lambda(lambda t: (t * 2) - 1),
-            ]
-        )
-
-        # define function
-        def transforms(examples):
-            examples["pixel_values"] = [
-                transform(image.convert("L")) for image in examples["image"]
-            ]
-            del examples["image"]
-            return examples
-
-        transformed_set = dataset.with_transform(transforms).remove_columns("label")
-        training_set = transformed_set["train"][:]["pixel_values"]
+        training_set = FashionMnistDataset()
     else:
         training_set = DDPMLabelsDataset(
             config,
@@ -226,8 +95,8 @@ def train_main(config, resume_flag=False):
     if not resume_flag:
         show_images(config, training_set, num_samples=15, cols=5)
 
-        # get an image to simulate forward diffusion
-        image = training_set[0]
+        # get a random image to simulate forward diffusion
+        image = training_set[np.random.permutation(len(training_set))[0]]
 
         # plot forward diffusion
         plot_diffusion_process(
@@ -243,5 +112,4 @@ def train_main(config, resume_flag=False):
 
 
 if __name__ == "__main__":
-    set_seed()
-    parse_cmdline_arguments()
+    main()

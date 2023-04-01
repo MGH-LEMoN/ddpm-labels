@@ -3,13 +3,12 @@ import json
 import os
 from datetime import datetime
 
-
 import numpy as np
 import torch
-from ext.numpyencoder import NumpyEncoder
 from torch.utils.tensorboard import SummaryWriter
-from datetime import datetime
+
 from ext import utils as ext_utils
+from ext.numpyencoder import NumpyEncoder
 
 
 class Configuration:

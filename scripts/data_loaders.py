@@ -43,3 +43,32 @@ class DDPMLabelsDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return self.n_files
+
+
+class FashionMnistDataset:
+    def __init__():
+        from datasets import load_dataset
+        from torchvision import transforms
+        from torchvision.transforms import Compose
+
+        dataset = load_dataset("fashion_mnist")
+        transform = Compose(
+            [
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Lambda(lambda t: (t * 2) - 1),
+            ]
+        )
+
+        # define function
+        def transforms(examples):
+            examples["pixel_values"] = [
+                transform(image.convert("L")) for image in examples["image"]
+            ]
+            del examples["image"]
+            return examples
+
+        transformed_set = dataset.with_transform(transforms).remove_columns("label")
+        training_set = transformed_set["train"][:]["pixel_values"]
+
+        return training_set
