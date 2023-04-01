@@ -9,44 +9,38 @@ def parse_cmdline_arguments():
 
     subparsers = parser.add_subparsers(help="sub-command help")
 
-    # create the parser for the "resume-train" command
-    parser_resume = subparsers.add_parser(
+    # create subparser for "resume-train" command
+    resume = subparsers.add_parser(
         "resume-train", help="Use this sub-command for resuming training"
     )
-    parser_resume.add_argument(
+    resume.add_argument(
         "logdir",
         type=str,
-        help="""Folder containing previous checkpoints""",
+        help="Folder containing previous checkpoints",
     )
-    parser_resume.add_argument("--debug", action="store_true", dest="debug")
+    resume.add_argument("--debug", action="store_true", dest="debug")
 
-    # create the parser for the "train" command
-    parser_train = subparsers.add_parser(
-        "train", help="Use this sub-command for training"
-    )
+    # create subparser for "train" command
+    train = subparsers.add_parser("train", help="Use this sub-command for training")
 
-    parser_train.add_argument("--debug", action="store_true", dest="debug")
-    parser_train.add_argument("--model_idx", type=int, dest="model_idx", default=1)
-    parser_train.add_argument("--epochs", type=int, dest="epochs", default=500)
-    parser_train.add_argument("--batch_size", type=int, dest="batch_size", default=32)
-    parser_train.add_argument("--time_steps", type=int, dest="time_steps", default=500)
-    parser_train.add_argument(
+    train.add_argument("--debug", action="store_true", dest="debug")
+    train.add_argument("--logdir", type=str, dest="logdir", default="test")
+
+    train.add_argument("--model_idx", type=int, dest="model_idx", default=1)
+    train.add_argument("--loss_type", type=str, dest="loss_type", default="l2")
+    train.add_argument("--time_steps", type=int, dest="time_steps", default=500)
+    train.add_argument("--epochs", type=int, dest="epochs", default=500)
+    train.add_argument("--batch_size", type=int, dest="batch_size", default=32)
+    train.add_argument("--lr", type=float, dest="lr", default=5e-5)
+
+    train.add_argument("--jei_flag", type=int, dest="jei_flag", default=1)
+    train.add_argument("--im_channels", type=int, dest="im_channels", default=1)
+    train.add_argument("--downsample", action="store_true", dest="downsample")
+    train.add_argument("--group_labels", type=int, dest="group_labels", default=0)
+    train.add_argument("--im_size", nargs="?", type=infer, dest="im_size", default=None)
+    train.add_argument(
         "--beta_schedule", type=str, dest="beta_schedule", default="linear"
     )
-    parser_train.add_argument("--logdir", type=str, dest="logdir", default="test")
-    parser_train.add_argument("--jei_flag", type=int, dest="jei_flag", default=0)
-    parser_train.add_argument(
-        "--group_labels", type=int, dest="group_labels", default=0
-    )
-    parser_train.add_argument("--lr", type=float, dest="lr", default=5e-5)
-    parser_train.add_argument(
-        "--im_size", nargs="?", type=infer, dest="im_size", default=None
-    )
-    parser_train.add_argument("--im_channels", type=int, dest="im_channels", default=1)
-    parser_train.add_argument(
-        "--loss_type", type=str, dest="loss_type", default="huber"
-    )
-    parser_train.add_argument("--downsample", action="store_true", dest="downsample")
 
     # If running the code in debug mode (vscode)
     gettrace = getattr(sys, "gettrace", None)
@@ -55,24 +49,14 @@ def parse_cmdline_arguments():
         sys.argv = [
             "main.py",
             "train",
-            "--lr",
-            "1e-4",
             "--time_steps",
             "800",
-            "--jei_flag",
-            "1",
-            "--group_labels",
-            "1",
-            "--logdir",
-            "test2",
-            "--im_size",
-            "(192, 224)",
             "--epochs",
             "10",
-            "--beta_schedule",
-            "linear",
-            "--model_idx",
+            "--group_labels",
             "1",
+            "--im_size",
+            "(192, 224)",
         ]
 
         # sys.argv = [
@@ -85,24 +69,16 @@ def parse_cmdline_arguments():
         # sys.argv = [
         #     "main.py",
         #     "train",
-        #     "--model_idx",
-        #     "1",
         #     "--time_steps",
         #     "300",
-        #     "--beta_schedule",
-        #     "linear",
-        #     "--logdir",
-        #     "mnist",
         #     "--epochs",
         #     "10",
         #     "--im_size",
         #     "(28, 28)",
-        #     "--debug"
+        #     "--debug",
         # ]
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
