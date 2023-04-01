@@ -40,7 +40,7 @@ def plot_diffusion_process(
             ax = axs[row_idx, col_idx]
 
             cmap = "gray" if img.dim() == 2 else "viridis"
-            ax.imshow(np.asarray(img), cmap=cmap, **imshow_kwargs)
+            ax.imshow(np.asarray(img.squeeze()), cmap=cmap, **imshow_kwargs)
 
             ax.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
             ax.set(title=rf"{str(time_steps[col_idx])}")

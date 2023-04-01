@@ -136,10 +136,9 @@ def samples_from_epochs(model_dirs):
                 # row = [image] + row if with_orig else row
                 for col_idx, img in enumerate(row):
                     ax = axs[row_idx, col_idx]
-                    if config.debug:
-                        ax.imshow(np.asarray(img[0]), cmap="gray", **imshow_kwargs)
-                    else:
-                        ax.imshow(np.asarray(img), **imshow_kwargs)
+
+                    cmap = "gray" if img.dim() == 2 else "viridis"
+                    ax.imshow(np.asarray(img.squeeze()), cmap=cmap, **imshow_kwargs)
                     ax.set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
                     # print title
