@@ -2,10 +2,6 @@ import glob
 import os
 import pathlib
 import shutil
-import sys
-
-sys.path.append("/space/calico/1/users/Harsha/ddpm-labels")
-
 from datetime import datetime
 
 import numpy as np

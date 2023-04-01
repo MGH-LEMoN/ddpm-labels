@@ -10,11 +10,9 @@ from torch.utils.data import DataLoader
 
 from ddpm_labels.models.model1 import SimpleUnet
 from ddpm_labels.models.model2 import Unet
-from scripts.losses import p_losses, reverse_diffusion_sample, sample
+from scripts.losses import p_losses, sample
 from scripts.plotting import plot_diffusion_process
 from scripts.yael_funcs import logit_to_image
-
-# from torchvision.utils import save_image
 
 # https://towardsdatascience.com/a-batch-too-large-finding-the-batch-size-that-fits-on-gpus-aef70902a9f1
 
@@ -44,31 +42,25 @@ def select_model(config):
         model = SimpleUnet(config.im_channels)
     elif config.model_idx == 2:
         if config.debug:
-            model = Unet(
-                dim=16,
-                channels=config.im_channels,
-                dim_mults=(1, 2, 4),
-            )
+            dim_mults = (1, 2, 4)
+        if config.downsample:
+            dim_mults = (2, 4, 8, 16, 32)
         else:
-            if not config.downsample:
-                dim_mults = (2, 4, 8, 16, 32, 64)
-            else:
-                dim_mults = (2, 4, 8, 16, 32)
-            model = Unet(
-                dim=16,
-                channels=config.im_channels,
-                dim_mults=dim_mults,
-            )
+            dim_mults = (2, 4, 8, 16, 32, 64)
+
+        model = Unet(
+            dim=16,
+            channels=config.im_channels,
+            dim_mults=dim_mults,
+        )
     else:
         print("Invalid Model ID")
         exit()
-    return model
+    return model.to(config.device)
 
 
 def train(config, training_set, cf_results):
     model = select_model(config)
-
-    model.to(config.device)
     optimizer = Adam(model.parameters(), lr=config.lr)
 
     if config.checkpoint:

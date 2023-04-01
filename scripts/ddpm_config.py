@@ -16,7 +16,7 @@ class Configuration:
     This configuration object is a collection of all variables relevant to the analysis
     """
 
-    def __init__(self, args, update=0, config_file_name=None):
+    def __init__(self, args, config_file_name=None):
         PRJCT_FOLDER = os.getcwd()
 
         self.logdir = getattr(args, "logdir", os.getcwd())
@@ -51,7 +51,7 @@ class Configuration:
         self.save_images = getattr(args, "save_images", False)
         self.save_checkpoint = getattr(args, "save_checkpoint", True)
 
-        self.debug = getattr(args, "debug", 1)
+        self.debug = getattr(args, "debug", 0)
 
         if self.debug:
             self.im_channels = 1
@@ -61,8 +61,8 @@ class Configuration:
                 1 - self.jei_flag
             )
 
-        self.lr = getattr(args, "lr", 1e-3)
-        self.loss_type = getattr(args, "loss_type", "l1")
+        self.lr = getattr(args, "lr", 1e-5)
+        self.loss_type = getattr(args, "loss_type", "l2")
 
         self.plot_time_steps = list(np.arange(0, self.time_steps, 100)) + [
             self.time_steps - 1
@@ -81,8 +81,7 @@ class Configuration:
         self.COMMIT_HASH = ext_utils.get_git_revision_short_hash()
         self.CREATED_ON = f'{datetime.now().strftime("%A %m/%d/%Y %H:%M:%S")}'
 
-        if update or not os.path.isfile(os.path.join(self.logdir, "config.json")):
-            self._write_config(config_file_name)
+        self._write_config(config_file_name)
 
     def _write_config(self, file_name=None):
         """Write configuration to a file
@@ -112,9 +111,7 @@ class Configuration:
         with open(file_name, "r") as fh:
             config_dict = json.load(fh)
 
-        args = argparse.Namespace(**config_dict)
-
-        return args
+        return argparse.Namespace(**config_dict)
 
 
 if __name__ == "__main__":

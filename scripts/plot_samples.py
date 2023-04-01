@@ -4,8 +4,6 @@ import glob
 import os
 import sys
 
-sys.path.append(os.getcwd())
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
