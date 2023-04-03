@@ -20,7 +20,7 @@ from scripts.yael_funcs import logit_to_image
 def auto_train(args, dataset, closed_form_calculations):
     accelerator = Accelerator()
 
-    @find_executable_batch_size(starting_batch_size=4096 * 4)
+    @find_executable_batch_size(starting_batch_size=4096)
     def inner_training_loop(batch_size=128):
         nonlocal accelerator  # Ensure they can be used in our context
         accelerator.free_memory()  # Free all lingering references
@@ -43,7 +43,7 @@ def select_model(config):
     elif config.model_idx == 2:
         if config.debug:
             dim_mults = (1, 2, 4)
-        if config.downsample:
+        elif config.downsample:
             dim_mults = (2, 4, 8, 16, 32)
         else:
             dim_mults = (2, 4, 8, 16, 32, 64)

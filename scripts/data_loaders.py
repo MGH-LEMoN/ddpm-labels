@@ -46,7 +46,7 @@ class DDPMLabelsDataset(torch.utils.data.Dataset):
 
 
 class FashionMnistDataset:
-    def __init__():
+    def __init__(self):
         from datasets import load_dataset
         from torchvision import transforms
         from torchvision.transforms import Compose
@@ -69,6 +69,4 @@ class FashionMnistDataset:
             return examples
 
         transformed_set = dataset.with_transform(transforms).remove_columns("label")
-        training_set = transformed_set["train"][:]["pixel_values"]
-
-        return training_set
+        self.training_set = transformed_set["train"][:]["pixel_values"]

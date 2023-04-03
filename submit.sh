@@ -13,6 +13,7 @@
 #SBATCH --mail-type=FAIL
 
 source /space/calico/1/users/Harsha/anaconda3/etc/profile.d/conda.sh
+export PYTHONPATH=$PWD
 conda activate ddpm
 
 echo 'Start time:' `date`

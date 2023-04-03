@@ -17,7 +17,7 @@ from scripts.ddpm_config import Configuration
 from scripts.ddpm_parser import parse_cmdline_arguments
 from scripts.losses import forward_diffusion_sample
 from scripts.plotting import plot_diffusion_process, show_images
-from scripts.training import auto_train, train
+from scripts.training import auto_train
 from scripts.utils import load_labelmap_names
 from scripts.yael_funcs import logit_to_image
 
@@ -34,7 +34,7 @@ def get_noisy_image(config, x_start, t, cf_results):
 
 def setup_training(config):
     if config.debug:
-        training_set = FashionMnistDataset()
+        training_set = FashionMnistDataset().training_set
     else:
         training_set = DDPMLabelsDataset(
             config,
@@ -59,7 +59,7 @@ def setup_training(config):
         file_name="forward_process.png",
     )
 
-    train(config, training_set, cf_results)
+    auto_train(config, training_set, cf_results)
 
 
 def main():
