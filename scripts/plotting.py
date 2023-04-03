@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+from scripts.ddpm_transforms import reverse_rgb_transform
 from scripts.yael_funcs import logit_to_image
 
 
@@ -77,7 +78,15 @@ def show_images(config, data, num_samples=20, cols=4):
         plt.subplot(num_samples // cols + 3, cols, i + 1)
 
         img = data[sample_id]
-        img = img.squeeze() if config.debug else logit_to_image(config, img)
+
+        if config.debug:
+            img = img.squeeze()
+
+        if config.rgb_flag:
+            img = reverse_rgb_transform(img)
+
+        if not config.rgb_flag and not config.debug:
+            img = logit_to_image(config, img)
 
         cmap = "gray" if img.dim() == 2 else "viridis"
         plt.imshow(img, interpolation="nearest", cmap=cmap)

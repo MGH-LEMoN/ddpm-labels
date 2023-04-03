@@ -15,6 +15,7 @@ from scripts.beta_schedule import closed_form_equations
 from scripts.data_loaders import DDPMLabelsDataset, FashionMnistDataset
 from scripts.ddpm_config import Configuration
 from scripts.ddpm_parser import parse_cmdline_arguments
+from scripts.ddpm_transforms import reverse_rgb_transform
 from scripts.losses import forward_diffusion_sample
 from scripts.plotting import plot_diffusion_process, show_images
 from scripts.training import train
@@ -27,7 +28,14 @@ def get_noisy_image(config, x_start, t, cf_results):
     x_noisy, _ = forward_diffusion_sample(x_start, t, cf_results)
 
     # turn back into RGB image
-    noisy_image = x_noisy if config.debug else logit_to_image(config, x_noisy)
+    if config.debug:
+        noisy_image = x_noisy
+
+    if config.rgb_flag:
+        noisy_image = reverse_rgb_transform(x_noisy)
+
+    if not config.debug and not config.rgb_flag:
+        noisy_image = logit_to_image(config, x_noisy)
 
     return noisy_image
 
@@ -62,8 +70,9 @@ def setup_training(config):
     try:
         train(config, training_set, cf_results)
     except RuntimeError:
-        print('No executable batch size found')
+        print("No executable batch size found")
         exit()
+
 
 def main():
     args = parse_cmdline_arguments()
