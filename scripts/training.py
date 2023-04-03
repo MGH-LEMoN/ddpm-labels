@@ -68,7 +68,7 @@ def train(config, training_set, cf_results):
     params = {
         "batch_size": config.batch_size,
         "shuffle": True,
-        "num_workers": 3,
+        "num_workers": len(os.sched_getaffinity(0)),
         # "worker_init_fn": np.random.seed(42),
     }
 
