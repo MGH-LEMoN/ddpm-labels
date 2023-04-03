@@ -81,9 +81,9 @@ class Configuration:
         self.COMMIT_HASH = ext_utils.get_git_revision_short_hash()
         self.CREATED_ON = f'{datetime.now().strftime("%A %m/%d/%Y %H:%M:%S")}'
 
-        self._write_config(config_file_name)
+        self.write_config(config_file_name)
 
-    def _write_config(self, file_name=None):
+    def write_config(self, file_name=None):
         """Write configuration to a file
         Args:
             CONFIG (dict): configuration

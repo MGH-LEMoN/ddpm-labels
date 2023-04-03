@@ -127,4 +127,5 @@ def train(config, training_set, cf_results):
                 file_name = f"reverse-{epoch:04d}.png"
                 plot_diffusion_process(config, denoised_images, file_name)
 
+    config.write_config()
     config.writer.close()
