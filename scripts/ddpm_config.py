@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import sys
 from datetime import datetime
 
 import numpy as np
@@ -70,6 +71,10 @@ class Configuration:
 
         if config_file_name:
             config_file_name = os.path.join(self.logdir, config_file_name)
+        elif sys.argv[1] == 'train':
+            config_file_name = os.path.join(self.logdir, "config.json")
+        elif sys.argv[1] == 'resume-train':
+            config_file_name = os.path.join(self.logdir, "config_resume.json")
 
         self.start_epoch = getattr(args, "start_epoch", 0)
         self.checkpoint = getattr(args, "checkpoint", None)
