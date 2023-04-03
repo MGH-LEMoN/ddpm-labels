@@ -2,10 +2,11 @@ import pathlib
 
 import numpy as np
 import torch
-from utils import group_labels, group_left_right
-from yael_funcs import image_to_logit
 
 from ext.lab2im.utils import load_volume
+from scripts.ddpm_transforms import rgb_transform
+from scripts.utils import group_labels, group_left_right
+from scripts.yael_funcs import image_to_logit, rgb_map_for_data
 
 
 # iterator dataset (for use with pathlib.Path generator as it is quick)
@@ -31,6 +32,9 @@ class DDPMLabelsDataset(torch.utils.data.Dataset):
         self.n_files = len(self.files)
         self.config = config
 
+        self.color_map = np.array(rgb_map_for_data())
+        self.rgb_transform = rgb_transform
+
     def __getitem__(self, index):
         vol = load_volume(self.files[index])
         if self.config.group_labels == 1:
@@ -38,6 +42,11 @@ class DDPMLabelsDataset(torch.utils.data.Dataset):
 
         if self.config.group_labels == 2:
             vol = np.vectorize(group_left_right().get)(vol)
+
+        if self.config.rgb_flag:
+            rgb_vol = self.color_map[vol.astype(int)]
+            rgb_vol = self.rgb_transform(rgb_vol)
+            return rgb_vol
 
         return image_to_logit(self.config, vol)
 

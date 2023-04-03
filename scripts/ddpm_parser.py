@@ -33,6 +33,7 @@ def parse_cmdline_arguments():
     train.add_argument("--batch_size", type=int, dest="batch_size", default=32)
     train.add_argument("--lr", type=float, dest="lr", default=5e-5)
 
+    train.add_argument("--rgb_flag", action="store_true", dest="rgb_flag")
     train.add_argument("--jei_flag", type=int, dest="jei_flag", default=1)
     train.add_argument("--im_channels", type=int, dest="im_channels", default=1)
     train.add_argument("--downsample", action="store_true", dest="downsample")
@@ -57,6 +58,7 @@ def parse_cmdline_arguments():
             "1",
             "--im_size",
             "(192, 224)",
+            # "--rgb_flag"
         ]
 
         # sys.argv = [
