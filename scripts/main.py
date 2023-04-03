@@ -17,7 +17,7 @@ from scripts.ddpm_config import Configuration
 from scripts.ddpm_parser import parse_cmdline_arguments
 from scripts.losses import forward_diffusion_sample
 from scripts.plotting import plot_diffusion_process, show_images
-from scripts.training import auto_train
+from scripts.training import train
 from scripts.utils import load_labelmap_names
 from scripts.yael_funcs import logit_to_image
 
@@ -59,8 +59,11 @@ def setup_training(config):
         file_name="forward_process.png",
     )
 
-    auto_train(config, training_set, cf_results)
-
+    try:
+        train(config, training_set, cf_results)
+    except RuntimeError:
+        print('No executable batch size found')
+        exit()
 
 def main():
     args = parse_cmdline_arguments()

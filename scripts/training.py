@@ -17,24 +17,22 @@ from scripts.yael_funcs import logit_to_image
 # https://towardsdatascience.com/a-batch-too-large-finding-the-batch-size-that-fits-on-gpus-aef70902a9f1
 
 
-def auto_train(args, dataset, closed_form_calculations):
+def auto_train(func):
     accelerator = Accelerator()
 
-    @find_executable_batch_size(starting_batch_size=4096)
-    def inner_training_loop(batch_size=128):
+    @find_executable_batch_size(starting_batch_size=2048)
+    def inner_training_loop(
+        batch_size=128, args=None, dataset=None, closed_form_calculations=None
+    ):
         nonlocal accelerator  # Ensure they can be used in our context
         accelerator.free_memory()  # Free all lingering references
 
         accelerator.print(f"Trying batch size: {batch_size}")
         args.batch_size = batch_size
 
-        train(args, dataset, closed_form_calculations)
+        func(args, dataset, closed_form_calculations)
 
-    try:
-        inner_training_loop()
-    except RuntimeError:
-        print("No executable batch size found")
-        exit()
+    return inner_training_loop
 
 
 def select_model(config):
@@ -59,6 +57,7 @@ def select_model(config):
     return model.to(config.device)
 
 
+@auto_train
 def train(config, training_set, cf_results):
     model = select_model(config)
     optimizer = Adam(model.parameters(), lr=config.lr)
