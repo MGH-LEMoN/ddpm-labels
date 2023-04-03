@@ -57,6 +57,7 @@ class Configuration:
         if self.debug:
             self.im_channels = 1
         else:
+            # 0: no grouping; 1: WM/GM/CSF/BG; 2:merge left/right
             group_labels_flag_dict = {0: 24, 1: 4, 2: 14}
             self.im_channels = group_labels_flag_dict[self.group_labels] - (
                 1 - self.jei_flag
