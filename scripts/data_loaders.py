@@ -9,22 +9,6 @@ from scripts.utils import group_labels, group_left_right
 from scripts.yael_funcs import image_to_logit, rgb_map_for_data
 
 
-# iterator dataset (for use with pathlib.Path generator as it is quick)
-class DDPMLabelsIterableDataset(torch.utils.data.IterableDataset):
-    def __init__(self):
-        self.files = pathlib.Path("/cluster/vxmdata1/FS_Slim/proc/cleaned").glob(
-            "*/aseg_23*.mgz"
-        )
-        self.n_files = len(self.files)
-
-    def __iter__(self):
-        self.source = iter(self.data)
-        for _, item in enumerate(self.source):
-            vol = load_volume(item)
-            resized_vol = torch.unsqueeze(torch.Tensor(vol.astype(np.uint8)), -1)
-            yield resized_vol
-
-
 # Dataset class for use with list(pathlib.Path). This is really slow
 class DDPMLabelsDataset(torch.utils.data.Dataset):
     def __init__(self, config, files):

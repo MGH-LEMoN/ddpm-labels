@@ -18,13 +18,11 @@ class Configuration:
     """
 
     def __init__(self, args, config_file_name=None):
-        PRJCT_FOLDER = os.getcwd()
-
         self.logdir = getattr(args, "logdir", os.getcwd())
 
         if not os.path.isabs(self.logdir):
             self.logdir = os.path.join(
-                PRJCT_FOLDER,
+                os.getcwd(),
                 "logs",
                 self.logdir,
             )
@@ -60,7 +58,8 @@ class Configuration:
         elif self.rgb_flag:
             self.im_channels = 3
         else:
-            # 0: no grouping; 1: WM/GM/CSF/BG; 2:merge left/right
+            # {idx: # of labels}
+            # 0: no grouping; 1: WM/GM/CSF/BG; 2: merge left/right
             group_labels_flag_dict = {0: 24, 1: 4, 2: 14}
             self.im_channels = group_labels_flag_dict[self.group_labels] - (
                 1 - self.jei_flag
@@ -73,12 +72,13 @@ class Configuration:
             self.time_steps - 1
         ]
 
-        if config_file_name:
-            config_file_name = os.path.join(self.logdir, config_file_name)
-        elif sys.argv[1] == "train":
-            config_file_name = os.path.join(self.logdir, "config.json")
-        elif sys.argv[1] == "resume-train":
-            config_file_name = os.path.join(self.logdir, "config_resume.json")
+        if sys.argv[1] == "train":
+            file_name = "config.json"
+
+        if sys.argv[1] == "resume-train":
+            file_name = "config_resume.json"
+
+        config_file_name = os.path.join(self.logdir, file_name)
 
         self.start_epoch = getattr(args, "start_epoch", 0)
         self.checkpoint = getattr(args, "checkpoint", None)
@@ -97,7 +97,7 @@ class Configuration:
         Args:
             CONFIG (dict): configuration
         """
-        file_name = "config.json" if file_name is None else file_name
+        file_name = file_name if file_name else "config.json"
 
         dictionary = self.__dict__
         json_object = json.dumps(
