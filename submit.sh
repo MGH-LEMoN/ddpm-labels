@@ -12,7 +12,7 @@
 #SBATCH --mail-user=hvgazula@umich.edu
 #SBATCH --mail-type=FAIL
 
-source /space/calico/1/users/Harsha/anaconda3/etc/profile.d/conda.sh
+source /space/calico/1/users/Harsha/miniconda3/etc/profile.d/conda.sh
 export PYTHONPATH=$PWD
 conda activate ddpm
 

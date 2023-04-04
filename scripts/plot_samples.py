@@ -11,6 +11,7 @@ from PIL import Image
 
 from scripts.beta_schedule import closed_form_equations
 from scripts.ddpm_config import Configuration
+from scripts.ddpm_transforms import reverse_rgb_transform
 from scripts.losses import sample
 from scripts.plotting import plot_diffusion_process
 from scripts.training import select_model
@@ -67,7 +68,7 @@ def samples_from_epochs(model_dirs):
         config = Configuration.read_config(os.path.join(model_dir, "config.json"))
 
         # add attribute (as it is missing)
-        config.sampling_batch_size = (num_samples := 1)
+        config.sampling_batch_size = (num_samples := 20)
 
         model = select_model(config)
         model.to(config.device)
@@ -103,10 +104,16 @@ def samples_from_epochs(model_dirs):
                 select_imgs = [
                     samples[time_step][choice] for time_step in config.plot_time_steps
                 ]
-                denoised_images = [
-                    logit_to_image(config, torch.Tensor(select_img))
-                    for select_img in select_imgs
-                ]
+                if "RGB" in base_dir:
+                    denoised_images = [
+                        reverse_rgb_transform(torch.Tensor(select_img))
+                        for select_img in select_imgs
+                    ]
+                else:
+                    denoised_images = [
+                        logit_to_image(config, torch.Tensor(select_img))
+                        for select_img in select_imgs
+                    ]
 
                 imgs.append(denoised_images)
 
